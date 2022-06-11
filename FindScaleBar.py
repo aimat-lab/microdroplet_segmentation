@@ -39,6 +39,9 @@ class ScaleBar:
             self.position = (np.mean(indx), max_row)
             self.is_valid = True
 
+    def export(self):
+        pass
+
 
 class Image:
 
