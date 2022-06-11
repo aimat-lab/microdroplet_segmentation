@@ -24,13 +24,14 @@ os.makedirs(output_path, exist_ok=True)
 # Loop over all valid input files.
 for file in files:
     # File naming.
-    filepath = os.path.join(search_path, file)
+    file_path = os.path.join(search_path, file)
     file_base = os.path.splitext(file)[0]
-    os.makedirs(os.path.join(output_path, file_base), exist_ok=True)
+    result_path = os.path.join(output_path, file_base)
+    os.makedirs(result_path, exist_ok=True)
 
     # Sequence of modules to process image file.
-    print("Running: ", filepath)
-    subprocess.run([python_command, "ImageSelection.py", "--file ", filepath], shell=True, check=True)
+    print("Running: ", file_path)
+    subprocess.run(python_command + " FindScaleBar.py --file %s --result %s" % (str(file_path), str(result_path)))
     # subprocess.run(python_command + " GridSegmentation.py --file " + file, shell=True, check=True)
     # subprocess.run(python_command+" DropletSeparationWithGrid.py --file "+file, shell=True, check=True)
     # subprocess.run(python_command + " DropletSeparation3.py --file " + file, shell=True, check=True)
