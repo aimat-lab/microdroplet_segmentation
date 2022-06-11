@@ -14,23 +14,39 @@ mpl.rcParams["keymap.forward"] = []
 
 class ScaleBar:
 
+    valid_bar_colors = [[255, 255, 255], [0, 255, 255], [255, 255, 0], [255, 0, 0], [128, 0, 128], [0, 128, 0]]
+
     def __init__(self):
 
         self.is_valid = False
-        self.scale_bar_length = None
-        self.scale_bar_position = None
+        self.length = None
+        self.position = None
+
+    def locate(self, rgb: np.ndarray):
+
+        for bc in self.valid_bar_colors:
+            test = rgb == np.array([[bc]], dtype=rgb.dtype)
+            test = np.all(test, axis=-1)
+            test_row = np.sum(test, axis=-1)
+            if np.max(test_row) < 50: continue
+            max_row = np.argmax(test_row)
+            indx = np.argwhere(test[max_row])[:, 0]
+            shiftind = (indx + 1)
+            neighb = shiftind[:-1] == indx[1:]
+            total_connected = np.sum(neighb)
+            if total_connected < 50: continue
+            self.length = total_connected + 1
+            self.position = (np.mean(indx), max_row)
+            self.is_valid = True
 
 
 class Image:
-
-    valid_bar_colors = [[255, 255, 255], [0, 255, 255], [255, 255, 0], [255, 0, 0], [128, 0, 128], [0, 128, 0]]
 
     def __init__(self, image: np.ndarray = None):
         self.rgb = image
         self.file_path = None
         self.file_name = None
-        self.scale_bar_length = None
-        self.scale_bar_position = None
+        self.scale_bar = ScaleBar()
 
     @property
     def shape(self):
@@ -43,20 +59,7 @@ class Image:
         self.file_name = os.path.split(file_path)[-1]
 
     def find_scale_bar(self):
-
-        for bc in self.valid_bar_colors:
-            test = self.rgb == np.array([[bc]], dtype=self.rgb.dtype)
-            test = np.all(test, axis=-1)
-            test_row = np.sum(test, axis=-1)
-            if np.max(test_row) < 50: continue
-            max_row = np.argmax(test_row)
-            indx = np.argwhere(test[max_row])[:, 0]
-            shiftind = (indx + 1)
-            neighb = shiftind[:-1] == indx[1:]
-            total_connected = np.sum(neighb)
-            if total_connected < 50: continue
-            self.scale_bar_length = total_connected + 1
-            self.scale_bar_position = (np.mean(indx), max_row)
+        self.scale_bar.locate(self.rgb)
 
 
 class GUI:
@@ -86,14 +89,16 @@ class GUI:
         pass
 
     def _title_scalebar(self):
-        if self.accept_scalebar and self.image.scale_bar_length is None:
+        if self.accept_scalebar and not self.image.scale_bar.is_valid:
             return "No Scale-bar available to accept."
-        elif self.accept_scalebar and self.image.scale_bar_length is not None:
-            return "Accepted Scale-bar with: {0} pixel".format(self.image.scale_bar_length)
+        elif self.accept_scalebar and self.image.scale_bar.is_valid:
+            return "Accepted Scale-bar with: {0} pixel".format(self.image.scale_bar.length)
         else:
             return "No accepted Scale-bar"
 
-    def draw_scale_bar(self, scale_bar_length, scale_bar_position):
+    def draw_scale_bar(self, scale_bar: ScaleBar):
+        scale_bar_length = scale_bar.length
+        scale_bar_position = scale_bar.position
         print("Scalebar found.")
         plt.plot(np.array([- scale_bar_length / 2, scale_bar_length / 2]) + scale_bar_position[0],
                  np.array([scale_bar_position[1], scale_bar_position[1]]), color="r")
@@ -109,8 +114,9 @@ class GUI:
         self.ax = ax
         self.image.find_scale_bar()
 
-        if self.image.scale_bar_length is not None:
-            self.draw_scale_bar(self.image.scale_bar_length, self.image.scale_bar_position)
+        if self.image.scale_bar.is_valid:
+            self.draw_scale_bar(self.image.scale_bar)
+
         # fig = plt.figure()
 
         self.ax.set_title(self._title_scalebar())
@@ -131,9 +137,9 @@ class GUI:
 
     def export_choice(self, file_path):
 
-        if self.accept_scalebar and self.image.scale_bar_length is not None:
+        if self.accept_scalebar and self.image.scale_bar.is_valid:
             with open(os.path.join(file_path, "scale_bar_length.txt"), "w") as f:
-                f.write(str(self.image.scale_bar_length))
+                f.write(str(self.image.scale_bar.length))
 
 
 if __name__ == "__main__":
