@@ -5,7 +5,6 @@ import argparse
 import yaml
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Cursor
 
 mpl.use("Qt5Cairo")
 mpl.rcParams["keymap.back"] = ['backspace']
@@ -17,30 +16,33 @@ class ScaleBar:
     valid_bar_colors = [[255, 255, 255], [0, 255, 255], [255, 255, 0], [255, 0, 0], [128, 0, 128], [0, 128, 0]]
 
     def __init__(self):
-
+        self.image_reference = None
         self.is_valid = False
         self.length = None
         self.position = None
 
-    def locate(self, rgb: np.ndarray):
-
+    def locate(self, rgb: np.ndarray, image_reference: str = None):
+        self.image_reference = image_reference
         for bc in self.valid_bar_colors:
             test = rgb == np.array([[bc]], dtype=rgb.dtype)
             test = np.all(test, axis=-1)
             test_row = np.sum(test, axis=-1)
-            if np.max(test_row) < 50: continue
+            if np.max(test_row) < 50:
+                continue
             max_row = np.argmax(test_row)
-            indx = np.argwhere(test[max_row])[:, 0]
-            shiftind = (indx + 1)
-            neighb = shiftind[:-1] == indx[1:]
+            index = np.argwhere(test[max_row])[:, 0]
+            shift_index = (index + 1)
+            neighb = shift_index[:-1] == index[1:]
             total_connected = np.sum(neighb)
-            if total_connected < 50: continue
+            if total_connected < 50:
+                continue
             self.length = total_connected + 1
-            self.position = (np.mean(indx), max_row)
+            self.position = (np.mean(index), max_row)
             self.is_valid = True
 
-    def export(self):
-        pass
+    def export(self, file_path):
+        with open(os.path.join(file_path, "scale_bar_length.txt"), "w") as f:
+            f.write(str(self.length))
 
 
 class Image:
@@ -48,21 +50,27 @@ class Image:
     def __init__(self, image: np.ndarray = None):
         self.rgb = image
         self.file_path = None
-        self.file_name = None
         self.scale_bar = ScaleBar()
 
     @property
     def shape(self):
         return self.rgb.shape
 
+    @property
+    def file_name(self):
+        return os.path.splitext(os.path.basename(self.file_path))[0]
+
+    @property
+    def file_extension(self):
+        return os.path.splitext(os.path.basename(self.file_path))[1]
+
     def load_image(self, file_path: str):
         """Load the image."""
         self.rgb = cv2.imread(file_path)
         self.file_path = os.path.realpath(file_path)
-        self.file_name = os.path.split(file_path)[-1]
 
     def find_scale_bar(self):
-        self.scale_bar.locate(self.rgb)
+        self.scale_bar.locate(self.rgb, self.file_path)
 
 
 class GUI:
@@ -112,15 +120,13 @@ class GUI:
                          horizontalalignment='left', verticalalignment='top')
 
     def propose(self):
+        # fig = plt.figure()
         fig, ax = plt.subplots()
         self.fig = fig
         self.ax = ax
-        self.image.find_scale_bar()
 
         if self.image.scale_bar.is_valid:
             self.draw_scale_bar(self.image.scale_bar)
-
-        # fig = plt.figure()
 
         self.ax.set_title(self._title_scalebar())
         self.image_in_fig = ax.imshow(self.image.rgb, cmap='hot')
@@ -138,29 +144,31 @@ class GUI:
         plt.close(fig)
         plt.close("all")
 
-    def export_choice(self, file_path):
+    def accept_choice(self, file_path):
 
         if self.accept_scalebar and self.image.scale_bar.is_valid:
-            with open(os.path.join(file_path, "scale_bar_length.txt"), "w") as f:
-                f.write(str(self.image.scale_bar.length))
+            self.image.scale_bar.export(file_path)
 
 
 if __name__ == "__main__":
     # Input arguments from command line.
     parser = argparse.ArgumentParser(description='Run FindScaleBar.')
     parser.add_argument("--file", required=True, help="Input filepath of image.")
-    parser.add_argument("--result", required=False, help="Filepath to output folder.", default="output")
     args = vars(parser.parse_args())
     print("Input of argparse:", args)
-    filepath = args["file"]
-    result_path = args["result"]
 
-    # filepath = "input/HG2A_30s.jpg"
+    # File and path information
+    arg_file_path = args["file"]
+    # arg_file_path = "output/HG2A_30s/HG2A_30s.jpg"
+    arg_result_path = os.path.dirname(arg_file_path)
+    arg_file_name = os.path.basename(arg_file_path)
 
     # Load Image
     img = Image()
-    img.load_image(filepath)
+    img.load_image(arg_file_path)
+    img.find_scale_bar()
+
     # Propose Grid
     gi = GUI(img)
     gi.propose()
-    gi.export_choice(result_path)
+    gi.accept_choice(arg_result_path)

@@ -2,6 +2,7 @@ import os
 import sys
 import matplotlib as mpl
 import subprocess
+import shutil
 
 mpl.use("Qt5Cairo")
 
@@ -23,15 +24,20 @@ os.makedirs(output_path, exist_ok=True)
 
 # Loop over all valid input files.
 for file in files:
-    # File naming.
+    # File properties.
     file_path = os.path.join(search_path, file)
     file_base = os.path.splitext(file)[0]
+    file_extension = os.path.splitext(file)[1]
     result_path = os.path.join(output_path, file_base)
+
+    # Result directory.
     os.makedirs(result_path, exist_ok=True)
+    shutil.copyfile(file_path, os.path.join(result_path, file))
 
     # Sequence of modules to process image file.
     print("Running: ", file_path)
-    subprocess.run(python_command + " FindScaleBar.py --file %s --result %s" % (str(file_path), str(result_path)))
+    subprocess.run(python_command + " FindScaleBar.py --file %s" % os.path.join(result_path, file))
+    subprocess.run(python_command + " ImageSelection.py --file %s" % os.path.join(result_path, file))
     # subprocess.run(python_command + " GridSegmentation.py --file " + file, shell=True, check=True)
     # subprocess.run(python_command+" DropletSeparationWithGrid.py --file "+file, shell=True, check=True)
     # subprocess.run(python_command + " DropletSeparation3.py --file " + file, shell=True, check=True)
