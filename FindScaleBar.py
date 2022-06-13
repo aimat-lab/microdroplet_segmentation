@@ -75,7 +75,6 @@ class Image:
         return os.path.splitext(os.path.basename(self.file_path))[1]
 
     def load_image(self, file_path: str):
-        """Load the image."""
         self.rgb = cv2.imread(file_path)
         self.file_path = os.path.realpath(file_path)
 
@@ -163,7 +162,7 @@ class GUI:
 
 if __name__ == "__main__":
     # Input arguments from command line.
-    parser = argparse.ArgumentParser(description='Run FindScaleBar.')
+    parser = argparse.ArgumentParser(description='Find a Scale Bar.')
     parser.add_argument("--file", required=True, help="Input filepath of image.")
     args = vars(parser.parse_args())
     print("Input of argparse:", args)
