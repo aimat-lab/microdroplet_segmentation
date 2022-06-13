@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import os
 import argparse
-# import yaml
+import yaml
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Cursor
@@ -47,6 +47,11 @@ class Image:
     def file_extension(self):
         return os.path.splitext(os.path.basename(self.file_path))[1]
 
+    @staticmethod
+    def save_yaml_file(out, file_name):
+        with open(file_name, 'w') as yaml_file:
+            yaml.dump(out, yaml_file, default_flow_style=False)
+
     def load_image(self, file_path: str):
         """Load the image."""
         self.rgb = cv2.imread(file_path)
@@ -72,6 +77,11 @@ class Image:
         new_rng = self.rotate_image(new_rng, self.rotation)
         new_rng = new_rng[self.range_y[0]:self.range_y[1], self.range_x[0]:self.range_x[1]]
         print(cv2.imwrite(os.path.join(dir_path, file_name), new_rng))
+        self.save_yaml_file({"file_path": self.file_path,
+                             "rotation": float(self.rotation),
+                             "range_x": [int(x) for x in self.range_x],
+                             "range_y": [int(x) for x in self.range_y]
+                             }, os.path.join(dir_path, "ImageSelection.yaml"))
 
 
 class GUI:
