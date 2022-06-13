@@ -17,6 +17,7 @@ class ScaleBar:
 
     def __init__(self):
         self.image_reference = None
+        self.user_accepted = None
         self.is_valid = False
         self.length = None
         self.position = None
@@ -32,17 +33,26 @@ class ScaleBar:
             max_row = np.argmax(test_row)
             index = np.argwhere(test[max_row])[:, 0]
             shift_index = (index + 1)
-            neighb = shift_index[:-1] == index[1:]
-            total_connected = np.sum(neighb)
+            neighbour = shift_index[:-1] == index[1:]
+            total_connected = np.sum(neighbour)
             if total_connected < 50:
                 continue
             self.length = total_connected + 1
             self.position = (np.mean(index), max_row)
             self.is_valid = True
 
+    @staticmethod
+    def save_yaml_file(out, file_name):
+        with open(file_name, 'w') as yaml_file:
+            yaml.dump(out, yaml_file, default_flow_style=False)
+
     def export(self, file_path):
-        with open(os.path.join(file_path, "scale_bar_length.txt"), "w") as f:
-            f.write(str(self.length))
+        self.save_yaml_file({"image_reference": self.image_reference,
+                             "is_valid": self.is_valid,
+                             "length": int(self.length),
+                             "position": [int(x) for x in self.position],
+                             "user_accepted": self.user_accepted},
+                            os.path.join(file_path, "ScaleBar.yaml"))
 
 
 class Image:
@@ -147,6 +157,7 @@ class GUI:
     def accept_choice(self, file_path):
 
         if self.accept_scalebar and self.image.scale_bar.is_valid:
+            self.image.scale_bar.user_accepted = self.accept_scalebar
             self.image.scale_bar.export(file_path)
 
 
