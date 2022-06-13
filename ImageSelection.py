@@ -152,7 +152,7 @@ class GUI:
                             ])
         plt.ylabel(info_cap, rotation='horizontal', ha='right')
         plt.show()
-        fig.canvas.set_window_title(self.image.file_name)
+        fig_manager.set_window_title(self.image.file_name)
         fig.canvas.mpl_connect('key_press_event', self.key_press_event)
         fig.canvas.mpl_connect('button_press_event', self.button_press_event)
         fig.canvas.start_event_loop()

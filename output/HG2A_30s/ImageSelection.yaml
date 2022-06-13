@@ -1,8 +1,8 @@
 file_path: H:\PostDoc\Project_PyCharm\microdroplet_segmentation\output\HG2A_30s\HG2A_30s.jpg
 range_x:
-- 0
-- 2406
+- 460
+- 1876
 range_y:
-- 0
-- 5203
-rotation: 0.0
+- 2708
+- 4888
+rotation: 0.75

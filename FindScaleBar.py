@@ -11,19 +11,43 @@ mpl.rcParams["keymap.back"] = ['backspace']
 mpl.rcParams["keymap.forward"] = []
 
 
+class Image:
+
+    def __init__(self, image: np.ndarray = None):
+        self.rgb = image
+        self.file_path = None
+
+    @property
+    def shape(self):
+        return self.rgb.shape
+
+    @property
+    def file_name(self):
+        return os.path.splitext(os.path.basename(self.file_path))[0]
+
+    @property
+    def file_extension(self):
+        return os.path.splitext(os.path.basename(self.file_path))[1]
+
+    def load_image(self, file_path: str):
+        self.rgb = cv2.imread(file_path)
+        self.file_path = os.path.realpath(file_path)
+
+
 class ScaleBar:
 
     valid_bar_colors = [[255, 255, 255], [0, 255, 255], [255, 255, 0], [255, 0, 0], [128, 0, 128], [0, 128, 0]]
 
-    def __init__(self):
-        self.image_reference = None
+    def __init__(self, image: Image):
+        self.image = image
+        self.image_reference = image.file_path
         self.user_accepted = None
         self.is_valid = False
         self.length = None
         self.position = None
 
-    def locate(self, rgb: np.ndarray, image_reference: str = None):
-        self.image_reference = image_reference
+    def locate(self):
+        rgb = self.image.rgb
         for bc in self.valid_bar_colors:
             test = rgb == np.array([[bc]], dtype=rgb.dtype)
             test = np.all(test, axis=-1)
@@ -55,38 +79,12 @@ class ScaleBar:
                             os.path.join(file_path, "ScaleBar.yaml"))
 
 
-class Image:
-
-    def __init__(self, image: np.ndarray = None):
-        self.rgb = image
-        self.file_path = None
-        self.scale_bar = ScaleBar()
-
-    @property
-    def shape(self):
-        return self.rgb.shape
-
-    @property
-    def file_name(self):
-        return os.path.splitext(os.path.basename(self.file_path))[0]
-
-    @property
-    def file_extension(self):
-        return os.path.splitext(os.path.basename(self.file_path))[1]
-
-    def load_image(self, file_path: str):
-        self.rgb = cv2.imread(file_path)
-        self.file_path = os.path.realpath(file_path)
-
-    def find_scale_bar(self):
-        self.scale_bar.locate(self.rgb, self.file_path)
-
-
 class GUI:
 
-    def __init__(self, image: Image = None):
+    def __init__(self, image: Image, scale_bar: ScaleBar):
 
         self.image: Image = image
+        self.scale_bar = scale_bar
 
         self.fig = None
         self.ax = None
@@ -109,10 +107,10 @@ class GUI:
         pass
 
     def _title_scalebar(self):
-        if self.accept_scalebar and not self.image.scale_bar.is_valid:
+        if self.accept_scalebar and not self.scale_bar.is_valid:
             return "No Scale-bar available to accept."
-        elif self.accept_scalebar and self.image.scale_bar.is_valid:
-            return "Accepted Scale-bar with: {0} pixel".format(self.image.scale_bar.length)
+        elif self.accept_scalebar and self.scale_bar.is_valid:
+            return "Accepted Scale-bar with: {0} pixel".format(self.scale_bar.length)
         else:
             return "No accepted Scale-bar"
 
@@ -134,8 +132,8 @@ class GUI:
         self.fig = fig
         self.ax = ax
 
-        if self.image.scale_bar.is_valid:
-            self.draw_scale_bar(self.image.scale_bar)
+        if self.scale_bar.is_valid:
+            self.draw_scale_bar(self.scale_bar)
 
         self.ax.set_title(self._title_scalebar())
         self.image_in_fig = ax.imshow(self.image.rgb, cmap='hot')
@@ -145,7 +143,7 @@ class GUI:
         info_cap = "".join(["Accept scale bar with 'm'."])
         plt.ylabel(info_cap, rotation='horizontal', ha='right')
         plt.show()
-        fig.canvas.set_window_title(self.image.file_name)
+        fig_manager.set_window_title(self.image.file_name)
         fig.canvas.mpl_connect('key_press_event', self.key_press_event)
         fig.canvas.mpl_connect('button_press_event', self.button_press_event)
         fig.canvas.start_event_loop()
@@ -155,9 +153,9 @@ class GUI:
 
     def accept_choice(self, file_path):
 
-        if self.accept_scalebar and self.image.scale_bar.is_valid:
-            self.image.scale_bar.user_accepted = self.accept_scalebar
-            self.image.scale_bar.export(file_path)
+        if self.accept_scalebar and self.scale_bar.is_valid:
+            self.scale_bar.user_accepted = self.accept_scalebar
+            self.scale_bar.export(file_path)
 
 
 if __name__ == "__main__":
@@ -176,9 +174,12 @@ if __name__ == "__main__":
     # Load Image
     img = Image()
     img.load_image(arg_file_path)
-    img.find_scale_bar()
+
+    # Scale Bar
+    scb = ScaleBar(img)
+    scb.locate()
 
     # Propose Grid
-    gi = GUI(img)
+    gi = GUI(img, scb)
     gi.propose()
     gi.accept_choice(arg_result_path)
