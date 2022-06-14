@@ -172,6 +172,13 @@ class Grid:
         np.save(os.path.join(filepath, "grid_x.npy"), self.grid_x_pos)
         np.save(os.path.join(filepath, "grid_y.npy"), self.grid_y_pos)
 
+    def reset_default_grid(self):
+        self.origin = self.default_origin  # is y,x
+        self.delta_x = 10.0
+        self.delta_y = 10.0
+        self.num_x = np.array([0, 4], dtype="int")
+        self.num_y = np.array([0, 4], dtype="int")
+
 
 class GUI:
     pixel_box = 10
@@ -241,7 +248,7 @@ class GUI:
             self.fig.canvas.flush_events()
 
         elif event.key == "n":
-            self.grid.propose_grid()
+            self.grid.reset_default_grid()
             self.grid.make_grid()
             self.set_grid_x(flush=False)
             self.set_grid_y(flush=False)
@@ -249,10 +256,12 @@ class GUI:
             self.fig.canvas.flush_events()
 
         elif event.key == "r":
-            pass
-
-        elif event.key == "u":
-            pass
+            self.grid.propose_grid()
+            self.grid.make_grid()
+            self.set_grid_x(flush=False)
+            self.set_grid_y(flush=False)
+            self.fig.canvas.draw()
+            self.fig.canvas.flush_events()
 
         elif event.key == "-":
             if self.bright + self.brightness_increase > 1: return
@@ -322,7 +331,7 @@ class GUI:
         self.selected_grid_line_y = idx
 
     def set_grid_x(self, flush=True):
-        """Redraw c lines."""
+        """Redraw x lines."""
         for hl in self.fig_x_lines:
             hl.remove()
         grid_x_pos, grid_y_pos = self.grid.make_grid()
@@ -358,7 +367,7 @@ class GUI:
             self.fig.canvas.flush_events()
 
     def draw_grid(self, restore=True):
-        """Draw grid with animated position, i.e. stretched and moved."""
+        """Draw grid with animated position, i.e. stretched and moved. Much faster!!"""
         if self.use_blit:
             if restore:
                 self.fig.canvas.restore_region(self.background)
@@ -375,12 +384,12 @@ class GUI:
                 hl.set_visible(True)
                 self.ax.draw_artist(hl)
             self.fig.canvas.blit()
-        else:
-            # we need to set grid again here
-            self.set_grid_y(flush=False)
-            self.set_grid_x(flush=False)
-            self.fig.canvas.draw()
-            self.fig.canvas.flush_events()
+            return
+        # we need to set grid again here
+        self.set_grid_y(flush=False)
+        self.set_grid_x(flush=False)
+        self.fig.canvas.draw()
+        self.fig.canvas.flush_events()
 
     def set_lines_visible(self, vis=True):
         for hl in self.fig_y_lines:
