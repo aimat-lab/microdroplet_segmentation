@@ -38,7 +38,8 @@ for file in files:
     print("Running: ", file_path)
     subprocess.run(python_command + " FindScaleBar.py --file %s" % os.path.join(result_path, file))
     subprocess.run(python_command + " ImageSelection.py --file %s" % os.path.join(result_path, file))
-    # subprocess.run(python_command + " GridSegmentation.py --file " + file, shell=True, check=True)
+    subprocess.run(python_command + " GridSegmentation.py --file %s" % os.path.join(
+        result_path, file_base+"_select"+file_extension))
     # subprocess.run(python_command+" DropletSeparationWithGrid.py --file "+file, shell=True, check=True)
     # subprocess.run(python_command + " DropletSeparation3.py --file " + file, shell=True, check=True)
 
