@@ -166,17 +166,25 @@ class Grid:
         self.optimize_grid()
         return self.make_grid()
 
+    def make_xy_grid_array(self):
+        grid_x_pos, grid_y_pos = self.make_grid()
+        num_x = len(grid_x_pos)
+        num_y = len(grid_y_pos)
+        grid_x_pos = np.repeat(np.expand_dims(np.expand_dims(grid_x_pos, axis=-1), axis=1), num_y, axis=1)
+        grid_y_pos = np.repeat(np.expand_dims(np.expand_dims(grid_y_pos, axis=-1), axis=0), num_x, axis=0)
+        return np.concatenate([grid_x_pos, grid_y_pos], axis=-1)
+
     def export_grid(self, file_path):
+        out_file_name = "GridProperties.yaml"
         self.save_yaml_file({"image_reference": self.image_reference,
+                             "grid_reference": str(os.path.join(file_path, out_file_name)),
                              "origin": [int(x) for x in self.origin],
                              "delta_x": float(self.delta_x),
                              "delta_y": float(self.delta_y),
                              "num_x": [int(x) for x in self.num_x],
                              "num_y": [int(x) for x in self.num_y]},
-                            os.path.join(file_path, "GridProperties.yaml"))
-        grid_x_pos, grid_y_pos = self.make_grid()
-        np.save(os.path.join(file_path, "grid_x.npy"), grid_x_pos)
-        np.save(os.path.join(file_path, "grid_y.npy"), grid_y_pos)
+                            os.path.join(file_path, out_file_name))
+        np.save(os.path.join(file_path, "grid.npy"), self.make_xy_grid_array())
 
     def reset_default_grid(self):
         self.origin = self.default_origin  # is y,x
@@ -309,7 +317,8 @@ class GUI:
             self.fig.canvas.flush_events()
 
         elif event.key == "-":
-            if self.bright + self.brightness_increase > 1: return
+            if self.bright + self.brightness_increase > 1:
+                return
             self.bright += self.brightness_increase
             self.image_in_fig.remove()
             self.image_in_fig = self.ax.imshow(self.image.gray_norm, cmap='hot', vmax=self.bright)
@@ -317,7 +326,8 @@ class GUI:
             self.fig.canvas.flush_events()
 
         elif event.key == "+":
-            if self.bright - self.brightness_increase < 0: return
+            if self.bright - self.brightness_increase < 0:
+                return
             self.bright -= self.brightness_increase
             self.image_in_fig.remove()
             self.image_in_fig = self.ax.imshow(self.image.gray_norm, cmap='hot', vmax=self.bright)
@@ -327,9 +337,12 @@ class GUI:
     def button_press_event(self, event):
         """Mouse click event analysis for line selection."""
         print('Click event at', event.xdata, event.ydata)
-        if not event.inaxes: return
-        if not self.interactive_mode: return
-        if event.inaxes != self.ax: return
+        if not event.inaxes:
+            return
+        if not self.interactive_mode:
+            return
+        if event.inaxes != self.ax:
+            return
         grid_x_pos, grid_y_pos = self.grid.make_grid()
         diff_x = np.abs(np.array(grid_x_pos) - event.xdata)
         diff_y = np.abs(np.array(grid_y_pos) - event.ydata)
