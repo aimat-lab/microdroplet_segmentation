@@ -54,7 +54,7 @@ class Image:
 
     def load_image(self, file_path: str):
         self.rgb = cv2.imread(file_path)
-        self.file_path = os.path.realpath(file_path)
+        self.file_path = os.path.normpath(file_path)
 
     def rotate_step(self, step):
         self.rotation = self.rotation + step
