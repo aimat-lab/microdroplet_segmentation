@@ -134,7 +134,7 @@ class GUI:
     def button_press_event(self, event):
         pass
 
-    def propose(self):
+    def run(self):
         # fig = plt.figure()
         fig, ax = plt.subplots()
         self.fig = fig
@@ -181,7 +181,7 @@ if __name__ == "__main__":
 
     # Propose Grid
     gi = GUI(img)
-    gi.propose()
+    gi.run()
 
     # Save Selection
     img.export(arg_result_path)

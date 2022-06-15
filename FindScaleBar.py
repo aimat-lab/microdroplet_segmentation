@@ -126,7 +126,7 @@ class GUI:
                          arrowprops=dict(facecolor='r', shrink=0.05),
                          horizontalalignment='left', verticalalignment='top')
 
-    def propose(self):
+    def run(self):
         # fig = plt.figure()
         fig, ax = plt.subplots()
         self.fig = fig
@@ -181,5 +181,5 @@ if __name__ == "__main__":
 
     # Propose Grid
     gi = GUI(img, scb)
-    gi.propose()
+    gi.run()
     gi.accept_choice(arg_result_path)

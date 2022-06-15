@@ -156,7 +156,7 @@ class Grid:
         return x_peaks, y_peaks
 
     def propose_grid(self):
-        """Main function to propose the grid for segmentation."""
+        """Main function to run the grid for segmentation."""
         dx, dy = self.find_grid_spacing_fft()
         self.origin = np.array([0, 0])
         self.delta_x = dx
