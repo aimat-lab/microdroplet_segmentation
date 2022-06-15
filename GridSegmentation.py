@@ -6,14 +6,16 @@ import scipy.signal
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import argparse
-
-# import yaml
+import yaml
 
 mpl.use("Qt5Cairo")
 mpl.rcParams["keymap.back"] = ['backspace']
 mpl.rcParams["keymap.forward"] = []
 mpl.rcParams["keymap.save"] = ['ctrl+s']  # Remove s here to be able to use w,s,d,a as arrows
 mpl.rcParams["keymap.home"] = ['h', 'home']
+mpl.rcParams["keymap.xscale"] = ['ctrl+k', 'ctrl+L']
+mpl.rcParams["keymap.yscale"] = ['ctrl+l']
+# mpl.rcParams["keymap.all_axes"] = ['ctrl+a']  # deprecated
 
 
 class Image:
@@ -53,22 +55,33 @@ class Image:
 
 
 class Grid:
+
     min_expected_segments = 3
     max_possible_segments = 1000
     default_origin = np.array([0, 0], dtype="int")
+    default_delta_x = 50
+    default_delta_y = 50
+    default_num_x = np.array([0, 4], dtype="int")
+    default_num_y = np.array([0, 4], dtype="int")
 
     def __init__(self, image: Image = None):
         self.image = image
+        self.image_reference = image.file_path
         self.image_intensity = self.image.gray_norm
         self.origin = self.default_origin  # is y,x
-        self.delta_x = 10.0
-        self.delta_y = 10.0
-        self.num_x = np.array([0, 4], dtype="int")
-        self.num_y = np.array([0, 4], dtype="int")
+        self.delta_x = self.default_delta_x
+        self.delta_y = self.default_delta_y
+        self.num_x = self.default_num_x  # is left, right
+        self.num_y = self.default_num_y  # is left, right
+
+    @staticmethod
+    def save_yaml_file(out, file_name):
+        with open(file_name, 'w') as yaml_file:
+            yaml.dump(out, yaml_file, default_flow_style=False)
 
     def make_grid(self):
-        grid_x_pos = np.arange(self.num_x[0], self.num_x[1]) * self.delta_x + self.origin[1]
-        grid_y_pos = np.arange(self.num_y[0], self.num_y[1]) * self.delta_y + self.origin[0]
+        grid_x_pos = np.arange(-self.num_x[0], self.num_x[1]) * self.delta_x + self.origin[1]
+        grid_y_pos = np.arange(-self.num_y[0], self.num_y[1]) * self.delta_y + self.origin[0]
         return grid_x_pos, grid_y_pos
 
     def optimize_grid(self):
@@ -86,7 +99,7 @@ class Grid:
         grid_x_pos, grid_y_pos = self.make_grid()
         grid_x_pos = opt_axis(grid_x_pos, self.delta_x, self.image.slice_x, 1)
         grid_y_pos = opt_axis(grid_y_pos, self.delta_y, self.image.slice_y, 0)
-        self.origin = np.array([np.amin(grid_y_pos), np.amin(grid_x_pos)])
+        self.origin = np.array([grid_y_pos[self.num_y[0]], grid_x_pos[self.num_x[0]]])
         return grid_x_pos, grid_y_pos
 
     def apply_offset(self, x=None, y=None):
@@ -168,19 +181,46 @@ class Grid:
         self.optimize_grid()
         return self.make_grid()
 
-    def export_grid(self, filepath):
-        np.save(os.path.join(filepath, "grid_x.npy"), self.grid_x_pos)
-        np.save(os.path.join(filepath, "grid_y.npy"), self.grid_y_pos)
+    def export_grid(self, file_path):
+        self.save_yaml_file({"image_reference": self.image_reference,
+                             "origin": [int(x) for x in self.origin],
+                             "delta_x": float(self.delta_x),
+                             "delta_y": float(self.delta_y),
+                             "num_x": [int(x) for x in self.num_x],
+                             "num_y": [int(x) for x in self.num_y]},
+                            os.path.join(file_path, "GridProperties.yaml"))
+        grid_x_pos, grid_y_pos = self.make_grid()
+        np.save(os.path.join(file_path, "grid_x.npy"), grid_x_pos)
+        np.save(os.path.join(file_path, "grid_y.npy"), grid_y_pos)
 
     def reset_default_grid(self):
         self.origin = self.default_origin  # is y,x
-        self.delta_x = 10.0
-        self.delta_y = 10.0
-        self.num_x = np.array([0, 4], dtype="int")
-        self.num_y = np.array([0, 4], dtype="int")
+        self.delta_x = self.default_delta_x
+        self.delta_y = self.default_delta_y
+        self.num_x = self.default_num_x  # is left, right
+        self.num_y = self.default_num_y  # is left, right
+
+    def shift_origin(self, nx=None, ny=None):
+        if nx is not None:
+            index_shift = np.arange(-self.num_x[0], self.num_x[1])[nx]
+            self.origin[1] += index_shift * self.delta_x
+            self.num_x -= np.array([-index_shift, index_shift], dtype="int")
+        if ny is not None:
+            index_shift = np.arange(-self.num_y[0], self.num_y[1])[ny]
+            self.origin[0] += index_shift * self.delta_y
+            self.num_y -= np.array([-index_shift, index_shift], dtype="int")
+
+    def add_grid_row(self, ny: np.ndarray):
+        self.num_y += ny
+        self.num_y[self.num_y < 0] = 0
+
+    def add_grid_column(self, nx: np.ndarray):
+        self.num_x += nx
+        self.num_x[self.num_x < 0] = 0
 
 
 class GUI:
+
     pixel_box = 10
     offset_step_x = 5
     stretch_step_x = 1
@@ -200,9 +240,8 @@ class GUI:
         self.fig = None
         self.ax = None
         self.image_in_fig = None
-        self.selected_grid_line_x = None
-        self.selected_grid_line_y = None
-        self.interactive_mode = False
+        self.interactive_mode = True
+        self.add_grid_segments = 1
         self.title = None
         self.bright = 1.0
         self.background = None
@@ -214,6 +253,7 @@ class GUI:
         if event.key == "enter":
             print("Accept current grid segmentation...")
             self.fig.canvas.stop_event_loop()
+        # w, a, s, d
         elif event.key == "d":
             self.grid.apply_stretch(dx=self.stretch_step_x)
             self.draw_grid()
@@ -226,6 +266,20 @@ class GUI:
         elif event.key == "w":
             self.grid.apply_stretch(dy=- self.stretch_step_y)
             self.draw_grid()
+        # j, i, k, l
+        elif event.key == "j":
+            self.grid.add_grid_column(nx=np.array([1, 0], dtype="int")*self.add_grid_segments)
+            self.set_grid_x()
+        elif event.key == "l":
+            self.grid.add_grid_column(nx=np.array([0, 1], dtype="int")*self.add_grid_segments)
+            self.set_grid_x()
+        elif event.key == "i":
+            self.grid.add_grid_row(ny=np.array([1, 0], dtype="int") * self.add_grid_segments)
+            self.set_grid_y()
+        elif event.key == "k":
+            self.grid.add_grid_row(ny=np.array([0, 1], dtype="int") * self.add_grid_segments)
+            self.set_grid_y()
+        # left, right, up, down
         elif event.key == "right":
             self.grid.apply_offset(x=self.offset_step_x)
             self.draw_grid()
@@ -242,8 +296,14 @@ class GUI:
         elif event.key == "m":
             print("Toggle interactive...")
             self.interactive_mode = not self.interactive_mode
-            is_locked = "Lock active" if self.interactive_mode else ""
-            self.ax.set_title(is_locked)
+            self.set_title()
+            self.fig.canvas.draw()
+            self.fig.canvas.flush_events()
+
+        elif event.key == "u":
+            print("Change grid adding/removing...")
+            self.add_grid_segments = self.add_grid_segments * (-1)
+            self.set_title()
             self.fig.canvas.draw()
             self.fig.canvas.flush_events()
 
@@ -285,50 +345,19 @@ class GUI:
         if not event.inaxes: return
         if not self.interactive_mode: return
         if event.inaxes != self.ax: return
-        xpos = event.xdata
-        ypos = event.ydata
-        diff_x = np.abs(np.array(self.grid.grid_x_pos) - xpos)
-        diff_y = np.abs(np.array(self.grid.grid_y_pos) - ypos)
-        foundx = np.any(diff_x < self.pixel_box)
-        foundy = np.any(diff_y < self.pixel_box)
-        if foundx:
-            print("Selected x line")
+        grid_x_pos, grid_y_pos = self.grid.make_grid()
+        diff_x = np.abs(np.array(grid_x_pos) - event.xdata)
+        diff_y = np.abs(np.array(grid_y_pos) - event.ydata)
+        found_x = np.any(diff_x < self.pixel_box)
+        found_y = np.any(diff_y < self.pixel_box)
+        if found_x:
             idx = np.argmin(diff_x)
-            if self.selected_grid_line_x is not None:
-                self.interactive_deselect_line_x()
-            self.interactive_select_line_x(idx)
-        elif foundy:
-            print("Selected y line")
+            self.grid.shift_origin(nx=idx)
+            self.set_grid_x()
+        elif found_y:
             idx = np.argmin(diff_y)
-            if self.selected_grid_line_y is not None:
-                self.interactive_deselect_line_y()
-            self.interactive_select_line_y(idx)
-
-    def interactive_select_line_x(self, idx, flush=True):
-        hl = self.fig_x_lines[idx]
-        if self.use_blit:
-            hl.set_color('y')
-            self.draw_grid()
-        else:
-            hl.remove()
-            self.fig_x_lines[idx] = self.ax.axvline(x=self.grid_x_pos[idx], color='y', linestyle='-')
-            if flush:
-                self.fig.canvas.draw()
-                self.fig.canvas.flush_events()
-        self.selected_grid_line_x = idx
-
-    def interactive_select_line_y(self, idx, flush=True):
-        hl = self.fig_y_lines[idx]
-        if self.use_blit:
-            hl.set_color('y')
-            self.draw_grid()
-        else:
-            hl.remove()
-            self.fig_y_lines[idx] = self.ax.axhline(y=self.grid_y_pos[idx], color='y', linestyle='-')
-            if flush:
-                self.fig.canvas.draw()
-                self.fig.canvas.flush_events()
-        self.selected_grid_line_y = idx
+            self.grid.shift_origin(ny=idx)
+            self.set_grid_y()
 
     def set_grid_x(self, flush=True):
         """Redraw x lines."""
@@ -402,6 +431,12 @@ class GUI:
             self.background = self.canvas.copy_from_bbox(self.ax.bbox)
             self.draw_grid(restore=False)
 
+    def set_title(self):
+        is_locked = not self.interactive_mode
+        is_add = "Add" if self.add_grid_segments > 0 else "Remove"
+        title = "Mode: %s , Lock active: %s" % (is_add, is_locked)
+        self.ax.set_title(title)
+
     def run(self):
         plt.ion()
         fig, ax = plt.subplots()
@@ -415,12 +450,13 @@ class GUI:
         self.set_grid_x(flush=False)
         # plt.xlim([0, self.image.shape[1]])
         # plt.ylim([self.image.shape[0], 0])
-        is_locked = "Lock active" if self.interactive_mode else ""
-        self.title = plt.title(is_locked)
-        info = "".join(["Press 'm' to toggle lock and click line.\n",
+        self.set_title()
+        info = "".join(["Press 'm' to lock origin.\n",
                         "Press 'w', 'a', 's', 'd' to stretch.\n",
-                        "Press 'left', 'up', ... key to move.\n",
-                        "Press '+', '-' to increase brightness (view only).\n",
+                        "Press 'left', 'up', 'down', 'right' key to move.\n",
+                        "Press 'j', 'i', 'k', 'l', to add segments.\n",
+                        "Press 'u' change between add and remove segments.\n",
+                        "Press '+', '-' to change brightness (view only).\n",
                         "Press 'n' make default grid.\n",
                         "Press 'r' reset to auto grid."])
         plt.ylabel(info, rotation='horizontal', ha='right')

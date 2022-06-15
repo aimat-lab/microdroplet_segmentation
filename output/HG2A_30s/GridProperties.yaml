@@ -1,0 +1,12 @@
+delta_x: 97.25
+delta_y: 95.6
+image_reference: H:\PostDoc\Project_PyCharm\microdroplet_segmentation\output\HG2A_30s\HG2A_30s_select.jpg
+num_x:
+- 0
+- 13
+num_y:
+- 0
+- 23
+origin:
+- 2749
+- 655
