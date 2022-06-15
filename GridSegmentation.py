@@ -462,13 +462,13 @@ class GUI:
 if __name__ == "__main__":
     # Input arguments from command line.
     parser = argparse.ArgumentParser(description='Run FindScaleBar.')
-    parser.add_argument("--file", required=False, help="Input filepath of image.")
+    parser.add_argument("--file", required=True, help="Input filepath of image.")
     args = vars(parser.parse_args())
     print("Input of argparse:", args)
 
     # File and path information
-    # arg_file_path = args["file"]
-    arg_file_path = "output/HG2A_30s/HG2A_30s_select.jpg"
+    arg_file_path = args["file"]
+    # arg_file_path = "output/HG2A_30s/HG2A_30s_select.jpg"
     arg_result_path = os.path.dirname(arg_file_path)
     arg_file_name = os.path.basename(arg_file_path)
 
