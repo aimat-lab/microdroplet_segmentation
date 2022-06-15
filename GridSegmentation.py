@@ -15,7 +15,7 @@ mpl.rcParams["keymap.save"] = ['ctrl+s']  # Remove s here to be able to use w,s,
 mpl.rcParams["keymap.home"] = ['h', 'home']
 mpl.rcParams["keymap.xscale"] = ['ctrl+k', 'ctrl+L']
 mpl.rcParams["keymap.yscale"] = ['ctrl+l']
-# mpl.rcParams["keymap.all_axes"] = ['ctrl+a']  # deprecated
+mpl.rcParams["keymap.all_axes"] = ['ctrl+a']  # deprecated
 
 
 class Image:
@@ -58,21 +58,21 @@ class Grid:
 
     min_expected_segments = 3
     max_possible_segments = 1000
-    default_origin = np.array([0, 0], dtype="int")
+    default_origin = np.array([0, 0], dtype="int")  # is [y, x]
     default_delta_x = 50
     default_delta_y = 50
-    default_num_x = np.array([0, 4], dtype="int")
-    default_num_y = np.array([0, 4], dtype="int")
+    default_num_x = np.array([0, 4], dtype="int")  # is [left, right] >= 0
+    default_num_y = np.array([0, 4], dtype="int")  # is [left, right] >= 0
 
-    def __init__(self, image: Image = None):
+    def __init__(self, image: Image):
         self.image = image
         self.image_reference = image.file_path
         self.image_intensity = self.image.gray_norm
-        self.origin = self.default_origin  # is y,x
+        self.origin = self.default_origin  # is [y, x]
         self.delta_x = self.default_delta_x
         self.delta_y = self.default_delta_y
-        self.num_x = self.default_num_x  # is left, right
-        self.num_y = self.default_num_y  # is left, right
+        self.num_x = self.default_num_x  # is [left, right] >= 0
+        self.num_y = self.default_num_y  # is [left, right] >= 0
 
     @staticmethod
     def save_yaml_file(out, file_name):
@@ -115,22 +115,7 @@ class Grid:
             self.delta_y += dy
 
     def confine_grid_to_figure(self):
-        xgrid = np.sort(np.array(self.grid_x_pos))
-        ygrid = np.sort(np.array(self.grid_y_pos))
-        # index_map_x = np.arange(len(xgrid), dtype="int")
-        # index_map_y = np.arange(len(ygrid), dtype="int")
-        xgrid = xgrid[np.logical_and(xgrid > 0, xgrid < self.image.shape[1])]
-        ygrid = ygrid[np.logical_and(ygrid > 0, ygrid < self.image.shape[0])]
-
-        def padd_grid(grid, delta, maxlen):
-            if grid[0] - delta > 0:
-                return padd_grid(np.concatenate([np.array([grid[0]]) - delta, grid]), delta, maxlen)
-            elif grid[-1] + delta < maxlen:
-                return padd_grid(np.concatenate([grid, np.array([grid[-1]]) + delta]), delta, maxlen)
-            return grid
-
-        self.grid_y_pos = padd_grid(ygrid, self.estimated_delta_y, self.image.shape[0])  # .tolist()
-        self.grid_x_pos = padd_grid(xgrid, self.estimated_delta_x, self.image.shape[1])  # .tolist()
+        pass
 
     @staticmethod
     def _get_fft_main_frequency_1d(signal, min_f, max_f):
@@ -448,6 +433,7 @@ class GUI:
         self.image_in_fig = plt.imshow(self.image.gray_norm, cmap='hot', vmax=self.bright)
         self.set_grid_y(flush=False)
         self.set_grid_x(flush=False)
+        # Don't need to set axis limit.
         # plt.xlim([0, self.image.shape[1]])
         # plt.ylim([self.image.shape[0], 0])
         self.set_title()
