@@ -66,8 +66,8 @@ class Grid:
 
     def __init__(self, image: Image):
         self.image = image
-        self.image_reference = image.file_path
         self.image_intensity = self.image.gray_norm
+        self.file_path = None
         self.origin = self.default_origin  # is [y, x]
         self.delta_x = self.default_delta_x
         self.delta_y = self.default_delta_y
@@ -174,17 +174,17 @@ class Grid:
         grid_y_pos = np.repeat(np.expand_dims(np.expand_dims(grid_y_pos, axis=-1), axis=0), num_x, axis=0)
         return np.concatenate([grid_x_pos, grid_y_pos], axis=-1)
 
-    def export_grid(self, file_path):
-        out_file_name = "GridProperties.yaml"
-        self.save_yaml_file({"image_reference": self.image_reference,
-                             "grid_reference": str(os.path.join(file_path, out_file_name)),
+    def save(self, directory_path, file_name="GridProperties.yaml"):
+        self.file_path = os.path.join(directory_path, file_name)
+        self.save_yaml_file({"image_reference": self.image.file_path if self.image is not None else None,
+                             "grid_reference": str(self.file_path),
                              "origin": [int(x) for x in self.origin],
                              "delta_x": float(self.delta_x),
                              "delta_y": float(self.delta_y),
                              "num_x": [int(x) for x in self.num_x],
                              "num_y": [int(x) for x in self.num_y]},
-                            os.path.join(file_path, out_file_name))
-        np.save(os.path.join(file_path, "grid.npy"), self.make_xy_grid_array())
+                            self.file_path)
+        np.save(os.path.join(directory_path, "grid.npy"), self.make_xy_grid_array())
 
     def reset_default_grid(self):
         self.origin = self.default_origin  # is y,x
@@ -500,4 +500,4 @@ if __name__ == "__main__":
     gi.run()
 
     # Export choice
-    grd.export_grid(arg_result_path)
+    grd.save(arg_result_path)
