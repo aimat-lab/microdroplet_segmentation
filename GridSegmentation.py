@@ -175,7 +175,7 @@ class Grid:
         return np.concatenate([grid_x_pos, grid_y_pos], axis=-1)
 
     def save(self, directory_path, file_name="GridProperties.yaml"):
-        self.file_path = os.path.join(directory_path, file_name)
+        self.file_path = os.path.normpath(os.path.join(directory_path, file_name))
         self.save_yaml_file({"image_reference": self.image.file_path if self.image is not None else None,
                              "grid_reference": str(self.file_path),
                              "origin": [int(x) for x in self.origin],
