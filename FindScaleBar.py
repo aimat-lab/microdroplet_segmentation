@@ -1,37 +1,14 @@
-import cv2
 import numpy as np
 import os
 import argparse
 import yaml
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from image import Image
 
 mpl.use("Qt5Cairo")
 mpl.rcParams["keymap.back"] = ['backspace']
 mpl.rcParams["keymap.forward"] = []
-
-
-class Image:
-
-    def __init__(self, image: np.ndarray = None):
-        self.rgb = image
-        self.file_path = None
-
-    @property
-    def shape(self):
-        return self.rgb.shape
-
-    @property
-    def file_name(self):
-        return os.path.splitext(os.path.basename(self.file_path))[0]
-
-    @property
-    def file_extension(self):
-        return os.path.splitext(os.path.basename(self.file_path))[1]
-
-    def load_image(self, file_path: str):
-        self.rgb = cv2.imread(file_path)
-        self.file_path = os.path.normpath(file_path)
 
 
 class ScaleBar:
@@ -47,7 +24,7 @@ class ScaleBar:
         self.position = None
 
     def locate(self):
-        rgb = self.image.rgb
+        rgb = self.image.data()
         for bc in self.valid_bar_colors:
             test = rgb == np.array([[bc]], dtype=rgb.dtype)
             test = np.all(test, axis=-1)
@@ -136,7 +113,7 @@ class GUI:
             self.draw_scale_bar(self.scale_bar)
 
         self.ax.set_title(self._title_scalebar())
-        self.image_in_fig = ax.imshow(self.image.rgb, cmap='hot')
+        self.image_in_fig = ax.imshow(self.image.data(), cmap='hot')
         plt.ion()
         fig_manager = plt.get_current_fig_manager()
         fig_manager.window.showMaximized()
