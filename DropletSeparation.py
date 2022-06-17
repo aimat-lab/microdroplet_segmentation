@@ -90,15 +90,16 @@ class ImageGrid:
         if len(image.shape) == 2:  # Gray scale image
             image = np.array(image / np.amax(image) * 255, dtype="uint8")
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
-        for i in range(self.shape[0]):
-            for j in range(self.shape[1]):
+        print(image.shape)
+        for i in range(self.grid_shape[0]):
+            for j in range(self.grid_shape[1]):
                 cv2.putText(
                     image, "{0}/{1}".format(i, j), (self.dx * i, self.dy * j + 15), font, f_size, (255, 255, 255), 2,
                     bottomLeftOrigin=False)
-        for i in range(self.shape[0]):
-            image[:, self.dx * i, :] = np.array([[255, 255, 255]])
-        for i in range(self.shape[1]):
-            image[self.dy * i, :, :] = np.array([[255, 255, 255]])
+        for i in range(self.grid_shape[0]):
+            image[:, self.dx * i, :] = np.array([[255, 255, 255]], dtype="uint8")
+        for i in range(self.grid_shape[1]):
+            image[self.dy * i, :, :] = np.array([[255, 255, 255]], dtype="uint8")
         print(cv2.imwrite(os.path.join(directory_path, file_name), cv2.cvtColor(image, cv2.COLOR_RGB2BGR)))
 
     @property
@@ -109,19 +110,14 @@ class ImageGrid:
     def grid_y_pos(self):
         return np.arange(0, self._grid_shape[1]) * self._grid_dxy[1]
 
-    def compute_preview(self, preview_resolution: int = 500000):
-        if self.rgb is None:
+    def resize(self, factor: float = 0.5):
+        if self.image is None:
             return
-        resol = self.shape[0] * self.shape[1]
-        area_scale = preview_resolution / resol
-        h_by_w = self.shape[0] / self.shape[1]
-        wd = int(np.sqrt(preview_resolution / h_by_w))
-        hd = int(preview_resolution / wd)
-        self.rgb_preview = cv2.resize(self.rgb, (wd, hd))
-        self.gray_norm_preview = cv2.resize(self.gray_norm, (wd, hd))
-        self.scale_x_preview = self.rgb_preview.shape[1] / self.shape[1]
-        self.scale_y_preview = self.rgb_preview.shape[0] / self.shape[0]
-        print("Setting resolution for preview from", self.rgb.shape, "to", self.rgb_preview.shape)
+        self._grid_dxy = np.array(np.array(self._grid_dxy, dtype="float") * factor, dtype="int")
+        wd = self._grid_dxy[0] * self._grid_shape[0]
+        hd = self._grid_dxy[1] * self._grid_shape[1]
+        self.image = cv2.resize(self.image, (wd, hd))
+        return self
 
 
 class DropletSeparation:
@@ -130,10 +126,29 @@ class DropletSeparation:
         self.original_image = image
         self.original_grid = grid
 
-        self.grid = ImageGrid(image.convert("GRAYSCALE"), *grid.make_grid())
-        self.grid_edges = ImageGrid(np.zeros_like(image.gray_norm), *grid.make_grid())
-        self.grid_segments = ImageGrid(np.zeros_like(image.gray_norm), *grid.make_grid())
-        self.grid_edges_dilated = ImageGrid(np.zeros_like(image.gray_norm), *grid.make_grid())
+        self.grid = ImageGrid(image.convert("GRAYSCALE").data(), *grid.make_grid())
+        self.grid_show = ImageGrid(image.data(), *grid.make_grid())
+        self.grid_edges = ImageGrid(image.convert("GRAYSCALE").data(), *grid.make_grid())
+        self.grid_segments = ImageGrid(image.convert("GRAYSCALE").data(), *grid.make_grid())
+        self.grid_edges_dilated = ImageGrid(image.convert("GRAYSCALE").data(), *grid.make_grid())
+
+        # Preview image
+        self.grid_preview = ImageGrid(image.data(), *grid.make_grid()).resize()
+        self.grid_edges_dilated_preview = ImageGrid(image.convert("GRAYSCALE").data(), *grid.make_grid()).resize()
+
+        self.grid_edges_dilated_preview.image = np.array(self.grid_edges_dilated_preview.image, dtype="bool")
+        self.grid_edges_dilated.image = np.array(self.grid_edges_dilated.image, dtype="bool")
+
+        self.mode_param_default = np.array([[[0, 0.3, 0.5, 5, 64, 3, 0.1]]])
+        self.mode_params_step = np.array([[[0, 0.1, 0.1, 0.25, 5, 1, 0.1]]])
+        self.mode_param_label = {1: "Marker background level",
+                                 2: "Marker droplet level",
+                                 3: "Sigma",
+                                 4: "Min. Drop Size",
+                                 5: "Median Kernel",
+                                 6: "Min. Intensity level"}
+        self.mode_params = np.zeros(list(self.grid.grid_shape) + [7])
+        self.mode_params[:, :] = self.mode_param_default
 
     @staticmethod
     def find_max_class(labeled_array: np.ndarray):
@@ -157,13 +172,13 @@ class DropletSeparation:
 
     def segmentation_watershed(self, pic: np.ndarray, min_cut: float = 0.3, max_cut: float = 0.5, sigma: float = 5,
                                min_drop: int = 64, median_kernel_size: int = 3, min_intensity: float = 0.1):
-
+        # print(min_cut, max_cut, sigma, min_drop, median_kernel_size, min_intensity)
         # restrict min/max marker
         min_cut = max(min_cut, 0.01)  # must be larger than 0
         min_cut = min(min_cut, 0.99)
         max_cut = min(max_cut, 1)
 
-        pic_smooth = cv2.medianBlur(np.array(pic * 255, dtype="uint8"), ksize=max(median_kernel_size, 1)) / 255
+        pic_smooth = cv2.medianBlur(np.array(pic * 255, dtype="uint8"), ksize=max(int(median_kernel_size), 1)) / 255
         pic_smooth = gaussian(pic_smooth, sigma=max(sigma, 0))
         pic_preproc = (pic_smooth - np.amin(pic_smooth)) / np.amax(pic_smooth)
 
@@ -190,22 +205,24 @@ class DropletSeparation:
                 self.find_segmentation_index(i, j)
 
     def find_segmentation_index(self, i, j):
-        max_drop, max_edge = self.segmentation_watershed(self.grid[i, j])
+        max_drop, max_edge = self.segmentation_watershed(self.grid[i, j], *self.mode_params[i,j,1:])
         self.grid_edges[i, j] = max_edge
         self.grid_segments[i, j] = max_drop
         max_edge_dilated = np.array(
             cv2.dilate(np.array(max_edge, dtype="float32"), np.ones((3, 3))), dtype="bool")
         self.grid_edges_dilated[i, j] = max_edge_dilated
-        # reduced = cv2.resize(np.array(max_edge_dilated, dtype="float32"), (reduced_shape[1], reduced_shape[0]))
+        reduced_shape = self.grid_edges_dilated_preview[i, j].shape
+        reduced = cv2.resize(np.array(max_edge_dilated, dtype="float32"), (reduced_shape[1], reduced_shape[0]))
+        self.grid_edges_dilated_preview[i, j] = np.array(reduced, dtype="bool")
 
 
 class GUI:
     brightness_increase = 10
 
-    def __init__(self, image: ImageGrid, image_preview: ImageGrid, droplet: DropletSeparation):
+    def __init__(self, droplet: DropletSeparation):
         self.droplet = droplet
-        self.image = image
-        self.image_preview = image_preview
+        self.image = droplet.grid_show
+        self.image_preview = droplet.grid_preview
 
         self.fig = None
         self.ax = None
@@ -219,29 +236,8 @@ class GUI:
 
         self.mode_preview = False
         self.mode_param_selection = 1
-        self.mode_params = {1: None, 2: None, 3: None, 4: None, 5: None, 6: None}
-        self.mode_param_label = {1: "Marker background level",
-                                 2: "Marker dropplet level",
-                                 3: "Sigma",
-                                 4: "Min. Drop Size",
-                                 5: "Median Kernel",
-                                 6: "Min. Intensity level"}
-        self.mode_param_default = {1: 0.3,
-                                   2: 0.5,
-                                   3: 5,
-                                   4: 64,
-                                   5: 3,
-                                   6: 0.1}
-        self.mode_params_step = {1: 0.1,
-                                 2: 0.1,
-                                 3: 0.25,
-                                 4: 5,
-                                 5: 2,
-                                 6: 0.1}
+        self.mode_param_label = droplet.mode_param_label
         self.debug = False
-        self.mode_param_label = {int(key): value for key, value in self.mode_param_label.items()}
-        self.mode_param_default = {int(key): value for key, value in self.mode_param_default.items()}
-        self.mode_params_step = {int(key): value for key, value in self.mode_params_step.items()}
 
     def add_logg(self, info):
         max_len_log = 40
@@ -253,16 +249,16 @@ class GUI:
         if self.mode_preview:
             # Reset ax lim also
             self.ax.set_xlim((0, self.image.shape[1]))
-            self.ax.set_ylim((self.image.shape[1], 0))
+            self.ax.set_ylim((self.image.shape[0], 0))
             self.mode_preview = False
         self.ax.set_title("" + "Parameter: " + self.mode_param_label[self.mode_param_selection])
-        image = self.image.image.copy()
-        image = Image.adjust_brightness(image, self.bright)
+        img = self.image.image.copy()
+        img = Image.adjust_brightness(img, self.bright)
         # cmap = plt.get_cmap('hot')
         # img = cmap(img)
         if self.image_in_fig is not None:
             self.image_in_fig.remove()
-        image[self.droplet.grid_edges_dilated] = np.array([[0, 255, 0]])
+        img[self.droplet.grid_edges_dilated.image] = np.array([[0, 255, 0]])
         self.image_in_fig = self.ax.imshow(img, vmax=self.bright)
         for i, lxy in enumerate(self.fig_y_lines):
             lxy.set_ydata((self.image.grid_y_pos[i], self.image.grid_y_pos[i]))
@@ -279,7 +275,7 @@ class GUI:
         if not self.mode_preview:
             self.ax.set_xlim((0, self.image_preview.shape[1]))
             self.ax.set_ylim((self.image_preview.shape[0], 0))
-            self.mode_prview = True
+            self.mode_preview = True
         self.ax.set_title("PREVIEW" + ", Parameter: " + self.mode_param_label[self.mode_param_selection])
         img = self.image_preview.image.copy()
         img = Image.adjust_brightness(img, self.bright)
@@ -287,12 +283,12 @@ class GUI:
         # img = cmap(img)
         if self.image_in_fig is not None:
             self.image_in_fig.remove()
-        img[self.droplet.grid_edges_dilated_preview] = np.array([[0, 255, 0]])
+        img[self.droplet.grid_edges_dilated_preview.image] = np.array([[0, 255, 0]])
         self.image_in_fig = self.ax.imshow(img, vmax=self.bright)
         for i, lxy in enumerate(self.fig_y_lines):
-            lxy.set_ydata((self.grid_y_pos_preview[i], self.grid_y_pos_preview[i]))
+            lxy.set_ydata((self.image_preview.grid_y_pos[i], self.image_preview.grid_y_pos[i]))
         for i, lxy in enumerate(self.fig_x_lines):
-            lxy.set_xdata((self.grid_x_pos_preview[i], self.grid_x_pos_preview[i]))
+            lxy.set_xdata((self.image_preview.grid_x_pos[i], self.image_preview.grid_x_pos[i]))
         self.log_text.set_text("".join(self.log_info))
         # self.log_text.set_position((self.rgb_preview.shape[1]*1.02, self.rgb_preview.shape[0]))
         self.log_text.set_position((1.02, 0))
@@ -301,15 +297,15 @@ class GUI:
             self.fig.canvas.flush_events()
 
     def _find_gridsegment(self, event):
-        diffx = -self.grid_x_sep + event.xdata
-        diffy = -self.grid_y_sep + event.ydata
+        diffx = -self.image.grid_x_pos + event.xdata
+        diffy = -self.image.grid_y_pos + event.ydata
         x_idx = np.argmin(np.where(diffx > 0, diffx, np.inf))
         y_idx = np.argmin(np.where(diffy > 0, diffy, np.inf))
         return x_idx, y_idx
 
     def _find_gridsegment_preview(self, event):
-        diffx = -self.grid_x_sep_preview + event.xdata
-        diffy = -self.grid_y_sep_preview + event.ydata
+        diffx = -self.image_preview.grid_x_pos + event.xdata
+        diffy = -self.image_preview.grid_y_pos + event.ydata
         xidx = np.argmin(np.where(diffx > 0, diffx, np.inf))
         yidx = np.argmin(np.where(diffy > 0, diffy, np.inf))
         return xidx, yidx
@@ -324,102 +320,87 @@ class GUI:
             self.draw_segmentation()
 
         elif event.key == "down":
+            ms = self.mode_param_selection
             if event.inaxes and event.xdata is not None and event.ydata is not None:
-                if self.mode_prview:
-                    xidx, yidx = self._find_gridsegment_preview(event)
+                if self.mode_preview:
+                    i, j = self._find_gridsegment_preview(event)
                 else:
-                    xidx, yidx = self._find_gridsegment(event)
-                self.mode_params[self.mode_param_selection][yidx][xidx] -= self.mode_params_step[
-                    self.mode_param_selection]
+                    i, j = self._find_gridsegment(event)
+                self.droplet.mode_params[i, j, ms] -= self.droplet.mode_params_step[0, 0, ms]
                 self.add_logg(
-                    "> " + self.mode_param_label[self.mode_param_selection] + " for ({0}, {1}) to {2}".format(xidx,
-                                                                                                              yidx,
-                                                                                                              self.mode_params[
-                                                                                                                  self.mode_param_selection][
-                                                                                                                  yidx][
-                                                                                                                  xidx]))
-                self.droplet.find_segmentation_index(yidx, xidx)
+                    "> " + self.mode_param_label[ms] + " for ({0}, {1}) to {2}".format(
+                        i, j, self.droplet.mode_params[i, j, ms]))
+                self.droplet.find_segmentation_index(i, j)
                 self.draw_segmentation_preview()
             else:
-                for i in range(len(self.mode_params[self.mode_param_selection])):
-                    for j in range(len(self.mode_params[self.mode_param_selection][i])):
-                        self.mode_params[self.mode_param_selection][i][j] -= self.mode_params_step[
-                            self.mode_param_selection]
-                        self.droplet.find_segmentation_index(i, j)
-                self.add_logg("> All " + self.mode_param_label[self.mode_param_selection] + " by -{0}".format(
-                    self.mode_params_step[self.mode_param_selection]))
+                self.droplet.mode_params[:, :, ms] -= self.droplet.mode_params_step[:, :, ms]
+                self.add_logg("> All " + self.mode_param_label[ms] + " by -{0}".format(
+                    self.droplet.mode_params_step[0, 0, ms]))
                 self.draw_segmentation_preview()
         elif event.key == "up":
+            ms = self.mode_param_selection
             if event.inaxes and event.xdata is not None and event.ydata is not None:
-                if self.mode_prview:
-                    xidx, yidx = self._find_gridsegment_preview(event)
+                if self.mode_preview:
+                    i, j = self._find_gridsegment_preview(event)
                 else:
-                    xidx, yidx = self._find_gridsegment(event)
-                self.mode_params[self.mode_param_selection][yidx][xidx] += self.mode_params_step[
-                    self.mode_param_selection]
+                    i, j = self._find_gridsegment(event)
+                self.droplet.mode_params[i, j, ms] += self.droplet.mode_params_step[0, 0, ms]
                 self.add_logg(
-                    "> " + self.mode_param_label[self.mode_param_selection] + " for ({0}, {1}) to {2}".format(xidx,
-                                                                                                              yidx,
-                                                                                                              self.mode_params[
-                                                                                                                  self.mode_param_selection][
-                                                                                                                  yidx][
-                                                                                                                  xidx]))
-                self.droplet.find_segmentation_index(yidx, xidx)
+                    "> " + self.mode_param_label[ms] + " for ({0}, {1}) to {2}".format(
+                        i, j, self.droplet.mode_params[i, j, ms]))
+                self.droplet.find_segmentation_index(i, j)
                 self.draw_segmentation_preview()
             else:
-                for i in range(len(self.mode_params[self.mode_param_selection])):
-                    for j in range(len(self.mode_params[self.mode_param_selection][i])):
-                        self.mode_params[self.mode_param_selection][i][j] += self.mode_params_step[
-                            self.mode_param_selection]
-                        self.segmentation_canny(i, j)
-                self.add_logg("> All" + self.mode_param_label[self.mode_param_selection] + "by +{0}".format(
-                    self.mode_params_step[self.mode_param_selection]))
+                self.droplet.mode_params[:, :, ms] += self.droplet.mode_params_step[:, :, ms]
+                self.droplet.find_segmentation()
+                self.add_logg("> All" + self.mode_param_label[ms] + "by +{0}".format(
+                    self.droplet.mode_params_step[0, 0, ms]))
                 self.draw_segmentation_preview()
         elif event.key == "1":
             self.mode_param_selection = 1
-            self.add_logg("> Switch paramter to {0}".format(self.mode_param_label[self.mode_param_selection]))
+            self.add_logg("> Switch parameter to {0}".format(self.mode_param_label[self.mode_param_selection]))
             self.draw_segmentation_preview()
         elif event.key == "2":
             self.mode_param_selection = 2
-            self.add_logg("> Switch paramter to {0}".format(self.mode_param_label[self.mode_param_selection]))
+            self.add_logg("> Switch parameter to {0}".format(self.mode_param_label[self.mode_param_selection]))
             self.draw_segmentation_preview()
         elif event.key == "3":
             self.mode_param_selection = 3
-            self.add_logg("> Switch paramter to {0}".format(self.mode_param_label[self.mode_param_selection]))
+            self.add_logg("> Switch parameter to {0}".format(self.mode_param_label[self.mode_param_selection]))
             self.draw_segmentation_preview()
         elif event.key == "4":
             self.mode_param_selection = 4
-            self.add_logg("> Switch paramter to {0}".format(self.mode_param_label[self.mode_param_selection]))
+            self.add_logg("> Switch parameter to {0}".format(self.mode_param_label[self.mode_param_selection]))
             self.draw_segmentation_preview()
         elif event.key == "5":
             self.mode_param_selection = 5
-            self.add_logg("> Switch paramter to {0}".format(self.mode_param_label[self.mode_param_selection]))
+            self.add_logg("> Switch parameter to {0}".format(self.mode_param_label[self.mode_param_selection]))
             self.draw_segmentation_preview()
         elif event.key == "6":
             self.mode_param_selection = 6
-            self.add_logg("> Switch paramter to {0}".format(self.mode_param_label[self.mode_param_selection]))
+            self.add_logg("> Switch parameter to {0}".format(self.mode_param_label[self.mode_param_selection]))
             self.draw_segmentation_preview()
         elif event.key == "-":
             self.bright -= self.brightness_increase
-            self.add_logg("> Change brighntess to {}".format(self.bright))
+            self.add_logg("> Change brightness to {}".format(self.bright))
             self.draw_segmentation_preview()
         elif event.key == "+":
             self.bright += self.brightness_increase
-            self.add_logg("> Change brighntess to {}".format(self.bright))
+            self.add_logg("> Change brightness to {}".format(self.bright))
             self.draw_segmentation_preview()
         elif event.key == "m":
             self.add_logg("> Average Parameter Stats:")
-            for key, item in self.mode_params.items():
-                self.add_logg("> {0}: <{1}>".format(self.mode_param_label[key], np.mean(item)))
+            for key, item in self.droplet.mode_param_label.items():
+                self.add_logg("> {0}: <{1}>".format(item, np.mean(self.droplet.mode_params[:, :, int(key)])))
             self.draw_segmentation_preview()
 
     def button_press_event(self, event):
         pass
 
     def _add_grid_numbers(self):
-        for i, x in enumerate(self.grid_x_sep):
-            for j, y in enumerate(self.grid_y_sep):
-                plt.text(x, y, "{0}/{1}".format(j, i), color="w",
+        for i, x in enumerate(self.image.grid_x_pos):
+            for j, y in enumerate(self.image.grid_y_pos):
+                plt.text(x, y, "{0}/{1}".format(i, j), color="w",
                          horizontalalignment='left',
                          verticalalignment='top')
 
@@ -467,17 +448,17 @@ class GUI:
         plt.ylim([self.image.shape[0], 0])
         plt.ylabel(self.y_label_text, rotation='horizontal', ha='right')
         self.log_text = plt.text(1.02, 0, "".join(self.log_info), backgroundcolor='w', transform=ax.transAxes)
-        for i in self.image_preview.grid_x_pos:
+        for i in self.image_preview.grid_y_pos:
             lx = self.ax.axhline(y=i, color='r', linestyle='-', lw=0.5)
             self.fig_y_lines.append(lx)
-        for j in self.image_preview.grid_y_pos:
+        for j in self.image_preview.grid_x_pos:
             ly = self.ax.axvline(x=j, color='r', linestyle='-', lw=0.5)
             self.fig_x_lines.append(ly)
         self.draw_segmentation_preview(flush=False)
         fig_manager = plt.get_current_fig_manager()
         fig_manager.window.showMaximized()
         plt.show()
-        fig.canvas.set_window_title(window_title)
+        fig_manager.set_window_title(window_title)
         fig.canvas.mpl_connect('key_press_event', self.key_press_event)
         fig.canvas.mpl_connect('button_press_event', self.button_press_event)
         fig.canvas.start_event_loop()
@@ -510,7 +491,7 @@ if __name__ == "__main__":
     # Image Grid
     seg = DropletSeparation(img, grd)
     seg.find_segmentation()
-    # seg.grid_edges_dilated.save(arg_result_path)
+    seg.grid_edges_dilated_preview.save(arg_result_path)
 
     # Propose Grid
     gi = GUI(seg)
