@@ -1,23 +1,24 @@
 import cv2
 import numpy as np
 import os
-import scipy as sp
+# import scipy as sp
 import pandas as pd
-import scipy.signal
+# import scipy.signal
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import sys
+# import sys
 import argparse
 from skimage import morphology
-from skimage.feature import canny
+# from skimage.feature import canny
 from skimage import segmentation
 from scipy import ndimage as ndi
-from skimage.filters import sobel, gaussian, median
-from skimage.measure import find_contours
-from skimage import data, img_as_float
-from skimage import exposure
-import time
-import yaml
+from skimage.filters import sobel, gaussian
+# from skimage.filters import median
+# from skimage.measure import find_contours
+# from skimage import data, img_as_float
+# from skimage import exposure
+# import time
+# import yaml
 from grid import Grid
 from image import Image
 
@@ -205,7 +206,7 @@ class DropletSeparation:
                 self.find_segmentation_index(i, j)
 
     def find_segmentation_index(self, i, j):
-        max_drop, max_edge = self.segmentation_watershed(self.grid[i, j], *self.mode_params[i,j,1:])
+        max_drop, max_edge = self.segmentation_watershed(self.grid[i, j], *self.mode_params[i, j, 1:])
         self.grid_edges[i, j] = max_edge
         self.grid_segments[i, j] = max_drop
         max_edge_dilated = np.array(
@@ -252,14 +253,14 @@ class GUI:
             self.ax.set_ylim((self.image.shape[0], 0))
             self.mode_preview = False
         self.ax.set_title("" + "Parameter: " + self.mode_param_label[self.mode_param_selection])
-        img = self.image.image.copy()
-        img = Image.adjust_brightness(img, self.bright)
+        image = self.image.image.copy()
+        image = Image.adjust_brightness(image, self.bright)
         # cmap = plt.get_cmap('hot')
         # img = cmap(img)
         if self.image_in_fig is not None:
             self.image_in_fig.remove()
-        img[self.droplet.grid_edges_dilated.image] = np.array([[0, 255, 0]])
-        self.image_in_fig = self.ax.imshow(img, vmax=self.bright)
+        image[self.droplet.grid_edges_dilated.image] = np.array([[0, 255, 0]])
+        self.image_in_fig = self.ax.imshow(image, vmax=self.bright)
         for i, lxy in enumerate(self.fig_y_lines):
             lxy.set_ydata((self.image.grid_y_pos[i], self.image.grid_y_pos[i]))
         for i, lxy in enumerate(self.fig_x_lines):
@@ -277,14 +278,14 @@ class GUI:
             self.ax.set_ylim((self.image_preview.shape[0], 0))
             self.mode_preview = True
         self.ax.set_title("PREVIEW" + ", Parameter: " + self.mode_param_label[self.mode_param_selection])
-        img = self.image_preview.image.copy()
-        img = Image.adjust_brightness(img, self.bright)
+        image = self.image_preview.image.copy()
+        image = Image.adjust_brightness(image, self.bright)
         # cmap = plt.get_cmap('hot')
         # img = cmap(img)
         if self.image_in_fig is not None:
             self.image_in_fig.remove()
-        img[self.droplet.grid_edges_dilated_preview.image] = np.array([[0, 255, 0]])
-        self.image_in_fig = self.ax.imshow(img, vmax=self.bright)
+        image[self.droplet.grid_edges_dilated_preview.image] = np.array([[0, 255, 0]])
+        self.image_in_fig = self.ax.imshow(image, vmax=self.bright)
         for i, lxy in enumerate(self.fig_y_lines):
             lxy.set_ydata((self.image_preview.grid_y_pos[i], self.image_preview.grid_y_pos[i]))
         for i, lxy in enumerate(self.fig_x_lines):
@@ -491,8 +492,10 @@ if __name__ == "__main__":
     # Image Grid
     seg = DropletSeparation(img, grd)
     seg.find_segmentation()
-    seg.grid_edges_dilated_preview.save(arg_result_path)
 
     # Propose Grid
     gi = GUI(seg)
     gi.run()
+
+    # Export results
+    seg.grid_segments.save(arg_result_path)
