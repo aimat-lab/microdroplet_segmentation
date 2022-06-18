@@ -100,7 +100,6 @@ class Image:
 
     @staticmethod
     def adjust_brightness(img: np.ndarray, value):
-        print(img.shape)
         num_channels = 1 if len(img.shape) < 3 else 1 if img.shape[-1] == 1 else 3
         img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR) if num_channels == 1 else img
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
