@@ -126,7 +126,7 @@ class GUI:
                 return
             self.bright += self.brightness_increase
             self.image_in_fig.remove()
-            self.image_in_fig = self.ax.imshow(self.image.data(), cmap='hot', vmax=self.bright)
+            self.image_in_fig = self.ax.imshow(self.image.data, cmap='hot', vmax=self.bright)
             self.fig.canvas.draw()
             self.fig.canvas.flush_events()
 
@@ -135,7 +135,7 @@ class GUI:
                 return
             self.bright -= self.brightness_increase
             self.image_in_fig.remove()
-            self.image_in_fig = self.ax.imshow(self.image.data(), cmap='hot', vmax=self.bright)
+            self.image_in_fig = self.ax.imshow(self.image.data, cmap='hot', vmax=self.bright)
             self.fig.canvas.draw()
             self.fig.canvas.flush_events()
 
@@ -248,7 +248,7 @@ class GUI:
         self.ax = ax
         self.use_blit = self.use_blit and self.canvas.supports_blit
         print("Use blit:", self.use_blit)
-        self.image_in_fig = plt.imshow(self.image.data(), cmap='hot', vmax=self.bright)
+        self.image_in_fig = plt.imshow(self.image.data, cmap='hot', vmax=self.bright)
         self.set_grid_y(flush=False)
         self.set_grid_x(flush=False)
         # Don't need to set axis limit.
@@ -293,11 +293,11 @@ if __name__ == "__main__":
     # Load Image
     img = Image()
     img.load_image(arg_file_path)
-    img_gray = img.convert("GRAYSCALE")
+    img_gray = img.convert("GRAY").astype("float").rescale_intensity()
 
     # Make Grid
     grd = Grid()
-    grd.propose_grid(img_gray.data())
+    grd.propose_grid(img_gray.data)
 
     # Propose Grid
     gi = GUI(img_gray, grd)

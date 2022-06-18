@@ -1,20 +1,24 @@
 import cv2
 import numpy as np
 import os
+import skimage.util
+from skimage.exposure import rescale_intensity
 
 
 class Image:
 
-    _image_type_list = ["BRG", "RGB", "GRAY", "GRAYSCALE"]
-
     def __init__(self, data: np.ndarray = None, image_type: str = None, file_path: str = None):
-        self._file_path = file_path
-        self._data = data
-        self._image_type = image_type
+        self._file_path: str = file_path
+        self._data: np.ndarray = data
+        self._image_type: str = image_type
 
-    def copy(self):
-        return Image(data=self._data.copy() if self._data is not None else None,
-                     image_type=self._image_type, file_path=self.file_path)
+    @property
+    def dtype(self):
+        return self._data.dtype
+
+    @property
+    def image_type(self):
+        return self._image_type
 
     @property
     def file_path(self):
@@ -32,13 +36,18 @@ class Image:
     def file_extension(self):
         return os.path.splitext(os.path.basename(self.file_path))[1]
 
+    @property
+    def data(self):
+        return self._data
+
+    def copy(self):
+        return Image(data=self._data.copy() if self._data is not None else None,
+                     image_type=self._image_type, file_path=self.file_path)
+
     def load_image(self, file_path: str):
         self._data = cv2.imread(file_path)
         self._image_type = "BGR"
         self._file_path = os.path.normpath(file_path)
-
-    def data(self):
-        return self._data
 
     @staticmethod
     def rotate_image(image: np.ndarray, angle: float):
@@ -48,16 +57,45 @@ class Image:
         new_data = cv2.warpAffine(image, rot_mat, (col, row))
         return new_data
 
-    def convert(self, image_type: str = "RGB"):
+    def convert(self, image_type: str, copy: bool = True):
         assert self._data is not None, "No image data found to convert."
         assert self._image_type is not None, "Image type information not found."
-        if self._image_type == image_type:
-            return self.copy()
 
-        if self._image_type == "BGR" and image_type == "GRAYSCALE":
-            assert len(self.shape) == 3, "Image image_type '%s' does not match channels." % self._image_type
-            gray = cv2.cvtColor(self._data, cv2.COLOR_BGR2GRAY)
-            return Image(data=gray/np.amax(gray), image_type="GRAYSCALE")  # should be float
+        if self._image_type == image_type:
+            return self.copy() if copy else self
+
+        def _convert(data, in_type, out_type):
+            conversion_string = "COLOR_" + in_type + "2" + out_type
+            conversion_code = getattr(cv2, conversion_string)
+            return cv2.cvtColor(data, conversion_code)
+
+        out_data = _convert(self._data, self._image_type, image_type)
+
+        if copy:
+            return Image(data=out_data, image_type=image_type)
+        else:
+            self._data = out_data
+            return self
+
+    def astype(self, dtype: str, copy: bool = True):
+        conversion_function = getattr(skimage.util, "img_as_" + dtype)
+        data = conversion_function(self._data, force_copy=copy)
+        if copy:
+            return Image(data=data, image_type=self._image_type)
+        else:
+            self._data = data
+            return self
+
+    def rescale_intensity(self, in_range: [str, tuple] = 'image', out_range: [str, tuple] = 'dtype',
+                          copy: bool = True):
+        # noinspection PyTypeChecker
+        data = rescale_intensity(image=self._data, in_range=in_range, out_range=out_range)
+        if copy:
+            # noinspection PyTypeChecker
+            return Image(data=data, image_type=self._image_type)
+        else:
+            self._data = data
+            return self
 
     @staticmethod
     def adjust_brightness(img: np.ndarray, value):

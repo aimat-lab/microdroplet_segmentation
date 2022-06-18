@@ -24,7 +24,7 @@ class ScaleBar:
         self.position = None
 
     def locate(self):
-        rgb = self.image.data()
+        rgb = self.image.data
         for bc in self.valid_bar_colors:
             test = rgb == np.array([[bc]], dtype=rgb.dtype)
             test = np.all(test, axis=-1)
@@ -113,7 +113,7 @@ class GUI:
             self.draw_scale_bar(self.scale_bar)
 
         self.ax.set_title(self._title_scalebar())
-        self.image_in_fig = ax.imshow(self.image.data(), cmap='hot')
+        self.image_in_fig = ax.imshow(self.image.data, cmap='hot')
         plt.ion()
         fig_manager = plt.get_current_fig_manager()
         fig_manager.window.showMaximized()

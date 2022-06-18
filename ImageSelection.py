@@ -17,7 +17,7 @@ class ImageSelection:
 
     def __init__(self, image: Image = None):
         self.image = image
-        self.gray_norm = image.convert("GRAYSCALE").data()
+        self.gray_norm = image.convert("GRAY").astype("float").rescale_intensity().data
         self.file_path = None
         self.rotation = 0
         self.range_x = None
@@ -48,7 +48,7 @@ class ImageSelection:
     def export(self, dir_path: str, file_name: str = None):
         if file_name is None:
             file_name = self.image.file_name+"_select"+self.image.file_extension
-        new_rng = self.image.copy().data()
+        new_rng = self.image.copy().data
         new_rng = Image.rotate_image(new_rng, self.rotation)
         new_rng = new_rng[self.range_y[0]:self.range_y[1], self.range_x[0]:self.range_x[1]]
         print(cv2.imwrite(os.path.join(dir_path, file_name), new_rng))

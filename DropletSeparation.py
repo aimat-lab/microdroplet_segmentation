@@ -111,7 +111,7 @@ class ImageGrid:
     def grid_y_pos(self):
         return np.arange(0, self._grid_shape[1]) * self._grid_dxy[1]
 
-    def resize(self, factor: float = 0.5):
+    def resize(self, factor: float = 0.35):
         if self.image is None:
             return
         self._grid_dxy = np.array(np.array(self._grid_dxy, dtype="float") * factor, dtype="int")
@@ -127,15 +127,20 @@ class DropletSeparation:
         self.original_image = image
         self.original_grid = grid
 
-        self.grid = ImageGrid(image.convert("GRAYSCALE").data(), *grid.make_grid())
-        self.grid_show = ImageGrid(image.data(), *grid.make_grid())
-        self.grid_edges = ImageGrid(image.convert("GRAYSCALE").data(), *grid.make_grid())
-        self.grid_segments = ImageGrid(image.convert("GRAYSCALE").data(), *grid.make_grid())
-        self.grid_edges_dilated = ImageGrid(image.convert("GRAYSCALE").data(), *grid.make_grid())
+        self.grid = ImageGrid(image.convert("GRAY").astype("float").rescale_intensity().data,
+                              *grid.make_grid())
+        self.grid_show = ImageGrid(image.data, *grid.make_grid())
+        self.grid_edges = ImageGrid(image.convert("GRAY").astype("float").rescale_intensity().data,
+                                    *grid.make_grid())
+        self.grid_segments = ImageGrid(image.convert("GRAY").astype("float").rescale_intensity().data,
+                                       *grid.make_grid())
+        self.grid_edges_dilated = ImageGrid(image.convert("GRAY").astype("float").rescale_intensity().data,
+                                            *grid.make_grid())
 
         # Preview image
-        self.grid_preview = ImageGrid(image.data(), *grid.make_grid()).resize()
-        self.grid_edges_dilated_preview = ImageGrid(image.convert("GRAYSCALE").data(), *grid.make_grid()).resize()
+        self.grid_preview = ImageGrid(image.data, *grid.make_grid()).resize()
+        self.grid_edges_dilated_preview = ImageGrid(image.convert("GRAY").astype("float").rescale_intensity().data,
+                                                    *grid.make_grid()).resize()
 
         self.grid_edges_dilated_preview.image = np.array(self.grid_edges_dilated_preview.image, dtype="bool")
         self.grid_edges_dilated.image = np.array(self.grid_edges_dilated.image, dtype="bool")

@@ -1,12 +1,12 @@
-delta_x: 94.28571428571428
-delta_y: 94.54166666666666
+delta_x: 94.61538461538461
+delta_y: 97.43478260869566
 grid_reference: output\HG2A_30s\GridProperties.yaml
 num_x:
 - 0
-- 14
+- 13
 num_y:
 - 0
-- 24
+- 23
 origin:
-- 31
-- -10
+- 75
+- 89
