@@ -126,21 +126,17 @@ class DropletSeparation:
     def __init__(self, image: Image, grid: Grid):
         self.original_image = image
         self.original_grid = grid
+        gray_norm = image.convert("GRAY").astype("float").rescale_intensity().data
 
-        self.grid = ImageGrid(image.convert("GRAY").astype("float").rescale_intensity().data,
-                              *grid.make_grid())
+        self.grid = ImageGrid(gray_norm.copy(), *grid.make_grid())
         self.grid_show = ImageGrid(image.data, *grid.make_grid())
-        self.grid_edges = ImageGrid(image.convert("GRAY").astype("float").rescale_intensity().data,
-                                    *grid.make_grid())
-        self.grid_segments = ImageGrid(image.convert("GRAY").astype("float").rescale_intensity().data,
-                                       *grid.make_grid())
-        self.grid_edges_dilated = ImageGrid(image.convert("GRAY").astype("float").rescale_intensity().data,
-                                            *grid.make_grid())
+        self.grid_edges = ImageGrid(gray_norm.copy(), *grid.make_grid())
+        self.grid_segments = ImageGrid(gray_norm.copy(),*grid.make_grid())
+        self.grid_edges_dilated = ImageGrid(gray_norm.copy(), *grid.make_grid())
 
         # Preview image
         self.grid_preview = ImageGrid(image.data, *grid.make_grid()).resize()
-        self.grid_edges_dilated_preview = ImageGrid(image.convert("GRAY").astype("float").rescale_intensity().data,
-                                                    *grid.make_grid()).resize()
+        self.grid_edges_dilated_preview = ImageGrid(gray_norm.copy(), *grid.make_grid()).resize()
 
         self.grid_edges_dilated_preview.image = np.array(self.grid_edges_dilated_preview.image, dtype="bool")
         self.grid_edges_dilated.image = np.array(self.grid_edges_dilated.image, dtype="bool")
