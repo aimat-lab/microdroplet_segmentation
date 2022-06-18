@@ -3,6 +3,7 @@ import numpy as np
 import os
 import skimage.util
 from skimage.exposure import rescale_intensity
+from typing import Union
 
 
 class Image:
@@ -86,7 +87,7 @@ class Image:
             self._data = data
             return self
 
-    def rescale_intensity(self, in_range: [str, tuple] = 'image', out_range: [str, tuple] = 'dtype',
+    def rescale_intensity(self, in_range: Union[str, tuple] = 'image', out_range: Union[str, tuple] = 'dtype',
                           copy: bool = True):
         # noinspection PyTypeChecker
         data = rescale_intensity(image=self._data, in_range=in_range, out_range=out_range)
