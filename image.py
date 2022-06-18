@@ -51,7 +51,7 @@ class Image:
         self._file_path = os.path.normpath(file_path)
 
     @staticmethod
-    def rotate_image(image: np.ndarray, angle: float):
+    def _rotate_image_array(image: np.ndarray, angle: float):
         row, col = image.shape[:2]
         center = tuple(np.array([row, col]) / 2)
         rot_mat = cv2.getRotationMatrix2D(center, angle, 1.0)

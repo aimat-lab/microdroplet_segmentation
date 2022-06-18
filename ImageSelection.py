@@ -34,7 +34,7 @@ class ImageSelection:
 
     def rotate_step(self, step):
         self.rotation = self.rotation + step
-        self.gray_norm = Image.rotate_image(self.gray_norm, step)
+        self.gray_norm = Image._rotate_image_array(self.gray_norm, step)
 
     def set_view(self, span_x, span_y):
         rng_x = np.sort(np.array(span_x, dtype="int"))
@@ -49,7 +49,7 @@ class ImageSelection:
         if file_name is None:
             file_name = self.image.file_name+"_select"+self.image.file_extension
         new_rng = self.image.copy().data
-        new_rng = Image.rotate_image(new_rng, self.rotation)
+        new_rng = Image._rotate_image_array(new_rng, self.rotation)
         new_rng = new_rng[self.range_y[0]:self.range_y[1], self.range_x[0]:self.range_x[1]]
         print(cv2.imwrite(os.path.join(dir_path, file_name), new_rng))
         self.save_yaml_file({"file_path": self.image.file_path,
