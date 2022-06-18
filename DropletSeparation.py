@@ -251,25 +251,27 @@ class GUI:
             self.log_info = self.log_info[-max_len_log:]
         self.log_info.append(info + "\n")
 
-    def draw_segmentation(self, flush=True):
-        if self.mode_preview:
+    def _draw_segmentation(self, image, edges, preview=False, flush=True):
+        if self.mode_preview != preview:
             # Reset ax lim also
-            self.ax.set_xlim((0, self.image.shape[1]))
-            self.ax.set_ylim((self.image.shape[0], 0))
-            self.mode_preview = False
-        self.ax.set_title("" + "Parameter: " + self.mode_param_label[self.mode_param_selection])
-        image = self.image.image.copy()
-        image = Image.adjust_brightness(image, self.bright)
+            self.ax.set_xlim((0, image.shape[1]))
+            self.ax.set_ylim((image.shape[0], 0))
+            self.mode_preview = preview
+        title_preview = "PREVIEW, " if preview else ""
+        self.ax.set_title(
+             title_preview + "Parameter: " + self.mode_param_label[self.mode_param_selection])
+        image_array = image.image.copy()
+        image_array = Image.adjust_brightness(image_array, self.bright)
         # cmap = plt.get_cmap('hot')
         # img = cmap(img)
         if self.image_in_fig is not None:
             self.image_in_fig.remove()
-        image[self.droplet.grid_edges_dilated.image] = np.array([[0, 255, 0]])
-        self.image_in_fig = self.ax.imshow(image, vmax=self.bright)
+        image_array[edges.image] = np.array([[0, 255, 0]])
+        self.image_in_fig = self.ax.imshow(image_array, vmax=self.bright)
         for i, lxy in enumerate(self.fig_y_lines):
-            lxy.set_ydata((self.image.grid_y_pos[i], self.image.grid_y_pos[i]))
+            lxy.set_ydata((image.grid_y_pos[i], image.grid_y_pos[i]))
         for i, lxy in enumerate(self.fig_x_lines):
-            lxy.set_xdata((self.image.grid_x_pos[i], self.image.grid_x_pos[i]))
+            lxy.set_xdata((image.grid_x_pos[i], image.grid_x_pos[i]))
         self.log_text.set_text("".join(self.log_info))
         # self.log_text.set_position((self.rgb.shape[1]*1.02, self.rgb.shape[0]))
         self.log_text.set_position((1.02, 0))
@@ -278,43 +280,18 @@ class GUI:
             self.fig.canvas.flush_events()
 
     def draw_segmentation_preview(self, flush=True):
-        if not self.mode_preview:
-            self.ax.set_xlim((0, self.image_preview.shape[1]))
-            self.ax.set_ylim((self.image_preview.shape[0], 0))
-            self.mode_preview = True
-        self.ax.set_title("PREVIEW" + ", Parameter: " + self.mode_param_label[self.mode_param_selection])
-        image = self.image_preview.image.copy()
-        image = Image.adjust_brightness(image, self.bright)
-        # cmap = plt.get_cmap('hot')
-        # img = cmap(img)
-        if self.image_in_fig is not None:
-            self.image_in_fig.remove()
-        image[self.droplet.grid_edges_dilated_preview.image] = np.array([[0, 255, 0]])
-        self.image_in_fig = self.ax.imshow(image, vmax=self.bright)
-        for i, lxy in enumerate(self.fig_y_lines):
-            lxy.set_ydata((self.image_preview.grid_y_pos[i], self.image_preview.grid_y_pos[i]))
-        for i, lxy in enumerate(self.fig_x_lines):
-            lxy.set_xdata((self.image_preview.grid_x_pos[i], self.image_preview.grid_x_pos[i]))
-        self.log_text.set_text("".join(self.log_info))
-        # self.log_text.set_position((self.rgb_preview.shape[1]*1.02, self.rgb_preview.shape[0]))
-        self.log_text.set_position((1.02, 0))
-        if flush:
-            self.fig.canvas.draw()
-            self.fig.canvas.flush_events()
+        self._draw_segmentation(self.image_preview, self.droplet.grid_edges_dilated_preview, preview=True, flush=flush)
 
-    def _find_gridsegment(self, event):
-        diffx = -self.image.grid_x_pos + event.xdata
-        diffy = -self.image.grid_y_pos + event.ydata
+    def draw_segmentation(self, flush=True):
+        self._draw_segmentation(self.image, self.droplet.grid_edges_dilated, preview=False, flush=flush)
+
+    @staticmethod
+    def _find_grid_segment(image, event):
+        diffx = -image.grid_x_pos + event.xdata
+        diffy = -image.grid_y_pos + event.ydata
         x_idx = np.argmin(np.where(diffx > 0, diffx, np.inf))
         y_idx = np.argmin(np.where(diffy > 0, diffy, np.inf))
         return x_idx, y_idx
-
-    def _find_gridsegment_preview(self, event):
-        diffx = -self.image_preview.grid_x_pos + event.xdata
-        diffy = -self.image_preview.grid_y_pos + event.ydata
-        xidx = np.argmin(np.where(diffx > 0, diffx, np.inf))
-        yidx = np.argmin(np.where(diffy > 0, diffy, np.inf))
-        return xidx, yidx
 
     def key_press_event(self, event):
         # print('you pressed', event.key, "at", event.xdata, event.ydata)
@@ -329,9 +306,9 @@ class GUI:
             ms = self.mode_param_selection
             if event.inaxes and event.xdata is not None and event.ydata is not None:
                 if self.mode_preview:
-                    i, j = self._find_gridsegment_preview(event)
+                    i, j = self._find_grid_segment(self.image_preview, event)
                 else:
-                    i, j = self._find_gridsegment(event)
+                    i, j = self._find_grid_segment(self.image, event)
                 self.droplet.mode_params[i, j, ms] -= self.droplet.mode_params_step[0, 0, ms]
                 self.add_logg(
                     "> " + self.mode_param_label[ms] + " for ({0}, {1}) to {2}".format(
@@ -347,9 +324,9 @@ class GUI:
             ms = self.mode_param_selection
             if event.inaxes and event.xdata is not None and event.ydata is not None:
                 if self.mode_preview:
-                    i, j = self._find_gridsegment_preview(event)
+                    i, j = self._find_grid_segment(self.image_preview, event)
                 else:
-                    i, j = self._find_gridsegment(event)
+                    i, j = self._find_grid_segment(self.image, event)
                 self.droplet.mode_params[i, j, ms] += self.droplet.mode_params_step[0, 0, ms]
                 self.add_logg(
                     "> " + self.mode_param_label[ms] + " for ({0}, {1}) to {2}".format(
