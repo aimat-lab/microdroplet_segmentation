@@ -152,7 +152,7 @@ if __name__ == "__main__":
 
     # Load Image
     img = Image()
-    img.load_image(arg_file_path)
+    img.load(arg_file_path)
 
     # Image selection
     img_sel = ImageSelection(img)

@@ -13,6 +13,18 @@ class Image:
         self._data: np.ndarray = data
         self._image_type: str = image_type
 
+    def __repr__(self):
+        return "<%s (%s) %s %s>" % (self.__class__.__name__, self._image_type, self.shape, self.dtype)
+
+    def __array__(self):
+        return self._data
+
+    def __setitem__(self, key, value):
+        self._data.__setitem__(key, value)
+
+    def __getitem__(self, item):
+        self._data.__getitem__(item)
+
     @property
     def dtype(self):
         return self._data.dtype
@@ -27,7 +39,7 @@ class Image:
 
     @property
     def shape(self):
-        return self._data.shape
+        return self._data.shape if self._data is not None else None
 
     @property
     def file_name(self):
@@ -45,10 +57,13 @@ class Image:
         return Image(data=self._data.copy() if self._data is not None else None,
                      image_type=self._image_type, file_path=self.file_path)
 
-    def load_image(self, file_path: str):
+    def load(self, file_path: str):
         self._data = cv2.imread(file_path)
         self._image_type = "BGR"
         self._file_path = os.path.normpath(file_path)
+
+    def save(self, file_path: str):
+        cv2.imwrite(file_path, self._data)
 
     @staticmethod
     def _rotate_image_array(image: np.ndarray, angle: float):

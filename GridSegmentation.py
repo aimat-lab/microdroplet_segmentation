@@ -292,7 +292,7 @@ if __name__ == "__main__":
 
     # Load Image
     img = Image()
-    img.load_image(arg_file_path)
+    img.load(arg_file_path)
     img_gray = img.convert("GRAY").astype("float").rescale_intensity()
 
     # Make Grid

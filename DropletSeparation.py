@@ -43,8 +43,8 @@ class ImageGrid:
         delta_x = np.ceil(np.mean(grid_x_pos[1:] - grid_x_pos[:-1]))
         delta_y = np.ceil(np.mean(grid_y_pos[1:] - grid_y_pos[:-1]))
         dxy = [int(delta_x), int(delta_y)]
-        pos_x = np.maximum(np.array(np.floor(grid_x_pos), dtype="int"), np.zeros_like(grid_x_pos, dtype="int"))
-        pos_y = np.maximum(np.array(np.floor(grid_y_pos), dtype="int"), np.zeros_like(grid_y_pos, dtype="int"))
+        pos_x = np.maximum(np.floor(grid_x_pos).astype("int"), np.zeros_like(grid_x_pos, dtype="int"))
+        pos_y = np.maximum(np.floor(grid_y_pos).astype("int"), np.zeros_like(grid_y_pos, dtype="int"))
         channels = [] if len(image.shape) < 3 else [image.shape[-1]]
         image_grid = np.zeros([len(pos_y) - 1, len(pos_x) - 1, dxy[1], dxy[0]] + channels, image.dtype)
         for i in range(len(pos_y) - 1):
@@ -131,7 +131,7 @@ class DropletSeparation:
         self.grid = ImageGrid(gray_norm.copy(), *grid.make_grid())
         self.grid_show = ImageGrid(image.data, *grid.make_grid())
         self.grid_edges = ImageGrid(gray_norm.copy(), *grid.make_grid())
-        self.grid_segments = ImageGrid(gray_norm.copy(),*grid.make_grid())
+        self.grid_segments = ImageGrid(gray_norm.copy(), *grid.make_grid())
         self.grid_edges_dilated = ImageGrid(gray_norm.copy(), *grid.make_grid())
 
         # Preview image
@@ -216,6 +216,32 @@ class DropletSeparation:
         reduced_shape = self.grid_edges_dilated_preview[i, j].shape
         reduced = cv2.resize(np.array(max_edge_dilated, dtype="float32"), (reduced_shape[1], reduced_shape[0]))
         self.grid_edges_dilated_preview[i, j] = np.array(reduced, dtype="bool")
+
+    def export(self, directory_path: str):
+        grid_shape = self.grid.grid_shape
+        pixel_size = np.zeros(grid_shape)
+        pixel_int = np.zeros(grid_shape)
+        for i in range(grid_shape[0]):
+            for j in range(grid_shape[1]):
+                segment_ij = self.grid_segments[i, j]
+                pixel_size[i, j] = np.sum(segment_ij)
+                pixel_int[i, j] = np.sum(self.grid[i, j][segment_ij.astype("bool")])
+        df = pd.DataFrame(np.transpose(pixel_size))
+        df.to_excel(os.path.join(directory_path, "DropletsSize.xls"))
+        df = pd.DataFrame(np.transpose(pixel_int))
+        df.to_excel(os.path.join(directory_path, "DropletsIntensity.xls"))
+        self.grid_edges.save(directory_path, "GridEdges.jpg")
+        self.grid_segments.save(directory_path, "GridSegments.jpg")
+        self.grid.save(directory_path, "GridImage.jpg")
+        if os.path.exists(os.path.join(directory_path, "scale_bar_length.txt")):
+            with open(os.path.join(directory_path, "scale_bar_length.txt"), "r") as f:
+                scale = int(f.read().strip())
+            if isinstance(scale, int):
+                if scale > 0:
+                    df2 = pd.DataFrame(np.array(pixel_size) / scale / scale)
+                    df2.to_excel(os.path.join(directory_path, "DropletsSizeScaled.xls"))
+            else:
+                print("Could not read int")
 
 
 class GUI:
@@ -376,42 +402,6 @@ class GUI:
     def button_press_event(self, event):
         pass
 
-    def _add_grid_numbers(self):
-        for i, x in enumerate(self.image.grid_x_pos):
-            for j, y in enumerate(self.image.grid_y_pos):
-                plt.text(x, y, "{0}/{1}".format(i, j), color="w",
-                         horizontalalignment='left',
-                         verticalalignment='top')
-
-    def export_data(self, filepath):
-        cols_line = self.grid_x_sep
-        rows_line = self.grid_y_sep
-        pixel_size = []
-        pixel_int = []
-        for i in range(len(rows_line) - 1):
-            row = []
-            row_int = []
-            for j in range(len(cols_line) - 1):
-                segment_ij = self.grid_segments[rows_line[i]:rows_line[i + 1], cols_line[j]:cols_line[j + 1]]
-                segment_int = self.gray[rows_line[i]:rows_line[i + 1], cols_line[j]:cols_line[j + 1]]
-                row.append(np.sum(segment_ij))
-                row_int.append(np.sum(segment_int[np.array(segment_ij, dtype="bool")]))
-            pixel_size.append(row)
-            pixel_int.append(row_int)
-        df = pd.DataFrame(np.array(pixel_size))
-        df.to_excel(os.path.join(filepath, "DropletsSize.xls"))
-        df = pd.DataFrame(np.array(pixel_int))
-        df.to_excel(os.path.join(filepath, "DropletsIntensity.xls"))
-        if os.path.exists(os.path.join(filepath, "scale_bar_length.txt")):
-            with open(os.path.join(filepath, "scale_bar_length.txt"), "r") as f:
-                scale = int(f.read().strip())
-            if isinstance(scale, int):
-                if scale > 0:
-                    df2 = pd.DataFrame(np.array(pixel_size) / scale / scale)
-                    df2.to_excel(os.path.join(filepath, "DropletsSizeScaled.xls"))
-            else:
-                print("Could not read int")
-
     def run(self, window_title: str = "Droplet Segmentation"):
         plt.ion()
         fig, ax = plt.subplots()
@@ -461,7 +451,7 @@ if __name__ == "__main__":
 
     # Load Image
     img = Image()
-    img.load_image(arg_file_path)
+    img.load(arg_file_path)
 
     # Make Grid
     grd = Grid()
@@ -473,7 +463,7 @@ if __name__ == "__main__":
 
     # Propose Grid
     gi = GUI(seg)
-    gi.run()
+    gi.run(str(arg_file_name))
 
     # Export results
-    seg.grid_segments.save(arg_result_path)
+    seg.export(arg_result_path)
