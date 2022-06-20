@@ -18,8 +18,8 @@ from skimage.filters import sobel, gaussian
 # from skimage import data, img_as_float
 # from skimage import exposure
 # import time
-# import yaml
-from grid import Grid
+import yaml
+from grid import Grid, ImageGrid
 from image import Image
 
 mpl.use("Qt5Cairo")
@@ -27,98 +27,6 @@ mpl.rcParams["keymap.back"] = ['backspace']
 mpl.rcParams["keymap.forward"] = []
 mpl.rcParams["keymap.save"] = ['ctrl+s']  # Remove s here
 mpl.rcParams["keymap.home"] = ['h', 'home']
-
-
-class ImageGrid:
-
-    def __init__(self, image: np.ndarray, grid_x_pos: np.ndarray, grid_y_pos: np.ndarray):
-        self.image, self._grid_shape, self._grid_dxy = self.make_grid_image(
-            image, grid_x_pos, grid_y_pos)
-
-    @staticmethod
-    def make_grid_image(image: np.ndarray, grid_x_pos: np.ndarray, grid_y_pos: np.ndarray):
-        """Make new image with equal sized segments of grid."""
-        assert image is not None, "Missing image to make image grid."
-        assert len(grid_x_pos) > 0 and len(grid_y_pos) > 0
-        delta_x = np.ceil(np.mean(grid_x_pos[1:] - grid_x_pos[:-1]))
-        delta_y = np.ceil(np.mean(grid_y_pos[1:] - grid_y_pos[:-1]))
-        dxy = [int(delta_x), int(delta_y)]
-        pos_x = np.maximum(np.floor(grid_x_pos).astype("int"), np.zeros_like(grid_x_pos, dtype="int"))
-        pos_y = np.maximum(np.floor(grid_y_pos).astype("int"), np.zeros_like(grid_y_pos, dtype="int"))
-        channels = [] if len(image.shape) < 3 else [image.shape[-1]]
-        image_grid = np.zeros([len(pos_y) - 1, len(pos_x) - 1, dxy[1], dxy[0]] + channels, image.dtype)
-        for i in range(len(pos_y) - 1):
-            for j in range(len(pos_x) - 1):
-                image_box = image[pos_y[i]:pos_y[i + 1], pos_x[j]:pos_x[j + 1]]
-                image_grid[i, j, :image_box.shape[0], :image_box.shape[1], ...] = image_box
-        grid = np.concatenate([np.concatenate(x, axis=1) for x in image_grid], axis=0)
-        grid_shape = [len(pos_x) - 1, len(pos_y) - 1]
-        return grid, grid_shape, dxy
-
-    def __getitem__(self, item):
-        i, j = item
-        dx, dy = self._grid_dxy
-        return self.image[dy * j:dy * (j + 1), dx * i:dx * (i + 1)]
-
-    def __setitem__(self, key, value):
-        i, j = key
-        dx, dy = self._grid_dxy
-        self.image[dy * j:dy * (j + 1), dx * i:dx * (i + 1)] = value
-
-    def plot(self):
-        plt.figure()
-        plt.imshow(self.image)
-        plt.show()
-
-    @property
-    def shape(self):
-        return np.array(self.image.shape)
-
-    @property
-    def grid_shape(self):
-        return np.array(self._grid_shape)
-
-    @property
-    def dx(self):
-        return int(self._grid_dxy[0])
-
-    @property
-    def dy(self):
-        return int(self._grid_dxy[1])
-
-    def save(self, directory_path, file_name: str = "ImageGrid.png", font: int = 1, f_size: int = 1):
-        image = self.image.copy()
-        if len(image.shape) == 2:  # Gray scale image
-            image = np.array(image / np.amax(image) * 255, dtype="uint8")
-            image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
-        print(image.shape)
-        for i in range(self.grid_shape[0]):
-            for j in range(self.grid_shape[1]):
-                cv2.putText(
-                    image, "{0}/{1}".format(i, j), (self.dx * i, self.dy * j + 15), font, f_size, (255, 255, 255), 2,
-                    bottomLeftOrigin=False)
-        for i in range(self.grid_shape[0]):
-            image[:, self.dx * i, :] = np.array([[255, 255, 255]], dtype="uint8")
-        for i in range(self.grid_shape[1]):
-            image[self.dy * i, :, :] = np.array([[255, 255, 255]], dtype="uint8")
-        print(cv2.imwrite(os.path.join(directory_path, file_name), cv2.cvtColor(image, cv2.COLOR_RGB2BGR)))
-
-    @property
-    def grid_x_pos(self):
-        return np.arange(0, self._grid_shape[0]) * self._grid_dxy[0]
-
-    @property
-    def grid_y_pos(self):
-        return np.arange(0, self._grid_shape[1]) * self._grid_dxy[1]
-
-    def resize(self, factor: float = 0.35):
-        if self.image is None:
-            return
-        self._grid_dxy = np.array(np.array(self._grid_dxy, dtype="float") * factor, dtype="int")
-        wd = self._grid_dxy[0] * self._grid_shape[0]
-        hd = self._grid_dxy[1] * self._grid_shape[1]
-        self.image = cv2.resize(self.image, (wd, hd))
-        return self
 
 
 class DropletSeparation:
@@ -201,6 +109,12 @@ class DropletSeparation:
 
         return max_drop, max_edge
 
+    @staticmethod
+    def load_yaml_file(file_name):
+        with open(file_name, 'r') as stream:
+            out = yaml.safe_load(stream)
+        return out
+
     def find_segmentation(self):
         for i in range(self.grid.grid_shape[0]):
             for j in range(self.grid.grid_shape[1]):
@@ -227,21 +141,22 @@ class DropletSeparation:
                 pixel_size[i, j] = np.sum(segment_ij)
                 pixel_int[i, j] = np.sum(self.grid[i, j][segment_ij.astype("bool")])
         df = pd.DataFrame(np.transpose(pixel_size))
-        df.to_excel(os.path.join(directory_path, "DropletsSize.xls"))
+        df.to_excel(os.path.join(directory_path, "DropletsSize.xlsx"))
         df = pd.DataFrame(np.transpose(pixel_int))
-        df.to_excel(os.path.join(directory_path, "DropletsIntensity.xls"))
+        df.to_excel(os.path.join(directory_path, "DropletsIntensity.xlsx"))
         self.grid_edges.save(directory_path, "GridEdges.jpg")
         self.grid_segments.save(directory_path, "GridSegments.jpg")
-        self.grid.save(directory_path, "GridImage.jpg")
-        if os.path.exists(os.path.join(directory_path, "scale_bar_length.txt")):
-            with open(os.path.join(directory_path, "scale_bar_length.txt"), "r") as f:
-                scale = int(f.read().strip())
-            if isinstance(scale, int):
-                if scale > 0:
-                    df2 = pd.DataFrame(np.array(pixel_size) / scale / scale)
-                    df2.to_excel(os.path.join(directory_path, "DropletsSizeScaled.xls"))
+        self.grid_show.save(directory_path, "GridImage.jpg")
+        np.save(os.path.join(directory_path, "DropletsParameter.npy"), self.mode_params)
+        if os.path.exists(os.path.join(directory_path, "ScaleBar.yaml")):
+            scale_bar_config = self.load_yaml_file(os.path.join(directory_path, "ScaleBar.yaml"))
+            scale = scale_bar_config["length"]
+            if scale is not None:
+                print("Using Scale Bar: %s" % scale)
+                df2 = pd.DataFrame(np.array(pixel_size) / scale / scale)
+                df2.to_excel(os.path.join(directory_path, "DropletsSizeScaled.xlsx"))
             else:
-                print("Could not read int")
+                print("Could not read scale bar")
 
 
 class GUI:
