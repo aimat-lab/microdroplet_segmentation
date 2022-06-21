@@ -21,6 +21,7 @@ from skimage.filters import sobel, gaussian
 import yaml
 from grid import Grid, ImageGrid
 from image import Image
+from configs import load_config
 
 mpl.use("Qt5Cairo")
 mpl.rcParams["keymap.back"] = ['backspace']

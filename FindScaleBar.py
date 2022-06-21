@@ -5,6 +5,7 @@ import yaml
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from image import Image
+from configs import load_config
 
 mpl.use("Qt5Cairo")
 mpl.rcParams["keymap.back"] = ['backspace']

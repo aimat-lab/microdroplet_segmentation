@@ -3,7 +3,7 @@ import os
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import argparse
-
+from configs import load_config
 from image import Image
 from grid import Grid
 

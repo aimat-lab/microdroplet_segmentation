@@ -7,6 +7,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Cursor
 from image import Image
+from config import load_config
 
 mpl.use("Qt5Cairo")
 mpl.rcParams["keymap.back"] = ['backspace']
@@ -136,6 +137,11 @@ class GUI:
         plt.close(fig)
         plt.close("all")
 
+    def set_config(self, config):
+        for x in ["brightness_increase", "img_rotation_step", "bright"]:
+            if x in config:
+                setattr(self, x, config[x])
+
 
 if __name__ == "__main__":
     # Input arguments from command line.
@@ -159,6 +165,7 @@ if __name__ == "__main__":
 
     # Propose Grid
     gi = GUI(img_sel)
+    gi.set_config(load_config("configs/ImageSelection.yaml"))
     gi.run()
 
     # Save Selection

@@ -53,6 +53,14 @@ class Image:
     def data(self):
         return self._data
 
+    def _return_new_instance(self, copy: bool, data: np.ndarray = None, image_type: str = None):
+        if copy:
+            return Image(data=data, image_type=image_type)
+        else:
+            self._data = data
+            self._image_type = image_type
+            return self
+
     def copy(self):
         return Image(data=self._data.copy() if self._data is not None else None,
                      image_type=self._image_type, file_path=self.file_path)
@@ -86,32 +94,19 @@ class Image:
             return cv2.cvtColor(data, conversion_code)
 
         out_data = _convert(self._data, self._image_type, image_type)
-
-        if copy:
-            return Image(data=out_data, image_type=image_type)
-        else:
-            self._data = out_data
-            return self
+        return self._return_new_instance(copy, data=out_data, image_type=image_type)
 
     def astype(self, dtype: str, copy: bool = True):
         conversion_function = getattr(skimage.util, "img_as_" + dtype)
         data = conversion_function(self._data, force_copy=copy)
-        if copy:
-            return Image(data=data, image_type=self._image_type)
-        else:
-            self._data = data
-            return self
+        return self._return_new_instance(copy, data=data, image_type=self._image_type)
 
     def rescale_intensity(self, in_range: Union[str, tuple] = 'image', out_range: Union[str, tuple] = 'dtype',
                           copy: bool = True):
         # noinspection PyTypeChecker
         data = rescale_intensity(image=self._data, in_range=in_range, out_range=out_range)
-        if copy:
-            # noinspection PyTypeChecker
-            return Image(data=data, image_type=self._image_type)
-        else:
-            self._data = data
-            return self
+        # noinspection PyTypeChecker
+        return self._return_new_instance(copy, data=data, image_type=self._image_type)
 
     @staticmethod
     def adjust_brightness(img: np.ndarray, value):
