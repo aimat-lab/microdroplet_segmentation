@@ -53,12 +53,13 @@ class Image:
     def data(self):
         return self._data
 
-    def _return_new_instance(self, copy: bool, data: np.ndarray = None, image_type: str = None):
+    def _return_new_instance(self, copy: bool, data: np.ndarray = None, image_type: str = None, file_path: str = None):
         if copy:
-            return Image(data=data, image_type=image_type)
+            return Image(data=data, image_type=image_type, file_path=file_path)
         else:
             self._data = data
             self._image_type = image_type
+            self._file_path = file_path
             return self
 
     def copy(self):
@@ -80,6 +81,10 @@ class Image:
         rot_mat = cv2.getRotationMatrix2D(center, angle, 1.0)
         new_data = cv2.warpAffine(image, rot_mat, (col, row))
         return new_data
+
+    def rotate(self, angle: float, copy: bool = True):
+        data = self._rotate_image_array(self._data, angle)
+        return self._return_new_instance(copy, data=data, image_type=self._image_type)
 
     def convert(self, image_type: str, copy: bool = True):
         assert self._data is not None, "No image data found to convert."
@@ -128,7 +133,7 @@ class Image:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if num_channels == 1 else img
         return img
 
-    def resize(self, resolution: int = 500000):
+    def resize(self, resolution: int = 500000, copy: bool = True):
         if self._data is None:
             return
         # data_resolution = self.shape[0] * self.shape[1]
@@ -137,4 +142,4 @@ class Image:
         wd = int(np.sqrt(resolution / h_by_w))
         hd = int(resolution / wd)
         new_data = cv2.resize(self._data, (wd, hd))
-        return Image(data=new_data, image_type=self._image_type)
+        return self._return_new_instance(copy, data=new_data, image_type=self._image_type)

@@ -18,7 +18,7 @@ class ImageSelection:
 
     def __init__(self, image: Image = None):
         self.image = image
-        self.gray_norm = image.convert("GRAY").astype("float").rescale_intensity().data
+        self.gray_norm = image.convert("GRAY").astype("float").rescale_intensity()
         self.file_path = None
         self.rotation = 0
         self.range_x = None
@@ -35,7 +35,7 @@ class ImageSelection:
 
     def rotate_step(self, step):
         self.rotation = self.rotation + step
-        self.gray_norm = Image._rotate_image_array(self.gray_norm, step)
+        self.gray_norm.rotate(step, copy=False)
 
     def set_view(self, span_x, span_y):
         rng_x = np.sort(np.array(span_x, dtype="int"))
@@ -49,8 +49,8 @@ class ImageSelection:
     def export(self, dir_path: str, file_name: str = None):
         if file_name is None:
             file_name = self.image.file_name+"_select"+self.image.file_extension
-        new_rng = self.image.copy().data
-        new_rng = Image._rotate_image_array(new_rng, self.rotation)
+        new_rng = self.image.copy()
+        new_rng = new_rng.rotate(self.rotation).data
         new_rng = new_rng[self.range_y[0]:self.range_y[1], self.range_x[0]:self.range_x[1]]
         print(cv2.imwrite(os.path.join(dir_path, file_name), new_rng))
         self.save_yaml_file({"file_path": self.image.file_path,
@@ -84,7 +84,7 @@ class GUI:
         self.fig.canvas.flush_events()
 
     def key_press_event(self, event):
-        print('you pressed', event.key, "at", event.xdata, event.ydata)
+        # print('you pressed', event.key, "at", event.xdata, event.ydata)
         if event.key == "enter":
             print("Accept current grid segmentation...")
             self.fig.canvas.stop_event_loop()
@@ -138,6 +138,8 @@ class GUI:
         plt.close("all")
 
     def set_config(self, config):
+        if config is None:
+            return
         for x in ["brightness_increase", "img_rotation_step", "bright"]:
             if x in config:
                 setattr(self, x, config[x])
@@ -156,6 +158,8 @@ if __name__ == "__main__":
     arg_result_path = os.path.dirname(arg_file_path)
     arg_file_name = os.path.basename(arg_file_path)
 
+    conf = load_config("configs/ImageSelection.yaml")
+
     # Load Image
     img = Image()
     img.load(arg_file_path)
@@ -165,7 +169,7 @@ if __name__ == "__main__":
 
     # Propose Grid
     gi = GUI(img_sel)
-    gi.set_config(load_config("configs/ImageSelection.yaml"))
+    gi.set_config(conf)
     gi.run()
 
     # Save Selection

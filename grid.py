@@ -8,6 +8,9 @@ import scipy.signal
 
 class Grid:
 
+    _list_defaults = ["min_expected_segments", "max_possible_segments",
+                      "default_origin", "default_delta_x", "default_delta_y", "default_num_x", "default_num_y"]
+
     min_expected_segments = 3
     max_possible_segments = 1000
     default_origin = np.array([0, 0], dtype="int")  # is [y, x]
@@ -167,15 +170,32 @@ class Grid:
         if dy is not None:
             self.delta_y += dy
 
+    def get_config(self):
+        conf = {}
+        for x in self._list_defaults:
+            if hasattr(self, x):
+                item = getattr(self, x)
+                if isinstance(item, np.ndarray):
+                    item = item.tolist()
+                conf[x] = item
+        return conf
+
+    def set_config(self, config: dict):
+        if config is None:
+            return
+        for x in self._list_defaults:
+            if x in config:
+                setattr(self, x, config[x])
+
 
 class ImageGrid:
 
     def __init__(self, image: np.ndarray, grid_x_pos: np.ndarray, grid_y_pos: np.ndarray):
-        self.image, self._grid_shape, self._grid_dxy = self.make_grid_image(
+        self.image, self._grid_shape, self._grid_dxy = self._gridify_image(
             image, grid_x_pos, grid_y_pos)
 
     @staticmethod
-    def make_grid_image(image: np.ndarray, grid_x_pos: np.ndarray, grid_y_pos: np.ndarray):
+    def _gridify_image(image: np.ndarray, grid_x_pos: np.ndarray, grid_y_pos: np.ndarray):
         """Make new image with equal sized segments of grid."""
         assert image is not None, "Missing image to make image grid."
         assert len(grid_x_pos) > 0 and len(grid_y_pos) > 0

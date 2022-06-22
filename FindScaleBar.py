@@ -5,7 +5,7 @@ import yaml
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from image import Image
-from configs import load_config
+from config import load_config
 
 mpl.use("Qt5Cairo")
 mpl.rcParams["keymap.back"] = ['backspace']
@@ -14,7 +14,9 @@ mpl.rcParams["keymap.forward"] = []
 
 class ScaleBar:
 
+    _list_defaults = ["valid_bar_colors", "minimum_length"]
     valid_bar_colors = [[255, 255, 255], [0, 255, 255], [255, 255, 0], [255, 0, 0], [128, 0, 128], [0, 128, 0]]
+    minimum_length = 50
 
     def __init__(self, image: Image):
         self.image = image
@@ -30,14 +32,14 @@ class ScaleBar:
             test = rgb == np.array([[bc]], dtype=rgb.dtype)
             test = np.all(test, axis=-1)
             test_row = np.sum(test, axis=-1)
-            if np.max(test_row) < 50:
+            if np.max(test_row) < self.minimum_length:
                 continue
             max_row = np.argmax(test_row)
             index = np.argwhere(test[max_row])[:, 0]
             shift_index = (index + 1)
             neighbour = shift_index[:-1] == index[1:]
             total_connected = np.sum(neighbour)
-            if total_connected < 50:
+            if total_connected < self.minimum_length:
                 continue
             self.length = total_connected + 1
             self.position = (np.mean(index), max_row)
@@ -56,6 +58,20 @@ class ScaleBar:
                              "user_accepted": self.user_accepted},
                             os.path.join(file_path, "ScaleBar.yaml"))
 
+    def set_config(self, config):
+        if config is None:
+            return
+        for x in self._list_defaults:
+            if x in config:
+                setattr(self, x, config[x])
+
+    def get_config(self):
+        config = {}
+        for x in self._list_defaults:
+            if hasattr(self, x):
+                config[x] = getattr(self, x)
+        return config
+
 
 class GUI:
 
@@ -70,12 +86,12 @@ class GUI:
         self.image_in_fig = None
 
     def key_press_event(self, event):
-        print('you pressed', event.key, "at", event.xdata, event.ydata)
+        # print('you pressed', event.key, "at", event.xdata, event.ydata)
         if event.key == "enter":
-            print("Accept current grid segmentation...")
+            print("Finish Scale Bar...")
             self.fig.canvas.stop_event_loop()
 
-        elif event.key == "m":
+        elif event.key == "a":
             self.accept_scalebar = not self.accept_scalebar
             self.ax.set_title(self._title_scalebar())
             self.fig.canvas.draw()
@@ -118,7 +134,7 @@ class GUI:
         plt.ion()
         fig_manager = plt.get_current_fig_manager()
         fig_manager.window.showMaximized()
-        info_cap = "".join(["Accept scale bar with 'm'."])
+        info_cap = "".join(["Accept scale bar with 'a'."])
         plt.ylabel(info_cap, rotation='horizontal', ha='right')
         plt.show()
         fig_manager.set_window_title(self.image.file_name)
@@ -149,12 +165,15 @@ if __name__ == "__main__":
     arg_result_path = os.path.dirname(arg_file_path)
     arg_file_name = os.path.basename(arg_file_path)
 
+    conf = load_config("configs/FindScaleBar.yaml")
+
     # Load Image
     img = Image()
     img.load(arg_file_path)
 
     # Scale Bar
     scb = ScaleBar(img)
+    scb.set_config(conf)
     scb.locate()
 
     # Propose Grid

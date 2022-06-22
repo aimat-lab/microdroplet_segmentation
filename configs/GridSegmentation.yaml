@@ -1,0 +1,21 @@
+pixel_box: 10
+offset_step_x: 5
+stretch_step_x: 1
+offset_step_y: 5
+stretch_step_y: 1
+default_size: 10
+brightness_increase: 0.1
+use_blit: true
+min_expected_segments: 3
+max_possible_segments: 1000
+default_origin:
+- 0
+- 0
+default_num_x:
+- 0
+- 4
+default_num_y:
+- 0
+- 4
+default_delta_x: 50
+default_delta_y: 50

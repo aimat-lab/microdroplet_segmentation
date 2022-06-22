@@ -3,7 +3,7 @@ import os
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import argparse
-from configs import load_config
+from config import load_config
 from image import Image
 from grid import Grid
 
@@ -18,7 +18,8 @@ mpl.rcParams["keymap.all_axes"] = ['ctrl+a']  # deprecated
 
 
 class GUI:
-
+    _list_defaults = ["pixel_box", "offset_step_x", "stretch_step_x", "offset_step_y",
+                      "stretch_step_y", "default_size", "brightness_increase", "use_blit"]
     pixel_box = 10
     offset_step_x = 5
     stretch_step_x = 1
@@ -66,10 +67,10 @@ class GUI:
             self.draw_grid()
         # j, i, k, l
         elif event.key == "j":
-            self.grid.add_grid_column(nx=np.array([1, 0], dtype="int")*self.add_grid_segments)
+            self.grid.add_grid_column(nx=np.array([1, 0], dtype="int") * self.add_grid_segments)
             self.set_grid_x()
         elif event.key == "l":
-            self.grid.add_grid_column(nx=np.array([0, 1], dtype="int")*self.add_grid_segments)
+            self.grid.add_grid_column(nx=np.array([0, 1], dtype="int") * self.add_grid_segments)
             self.set_grid_x()
         elif event.key == "i":
             self.grid.add_grid_row(ny=np.array([1, 0], dtype="int") * self.add_grid_segments)
@@ -141,7 +142,7 @@ class GUI:
 
     def button_press_event(self, event):
         """Mouse click event analysis for line selection."""
-        print('Click event at', event.xdata, event.ydata)
+        # print('Click event at', event.xdata, event.ydata)
         if not event.inaxes:
             return
         if not self.interactive_mode:
@@ -276,6 +277,13 @@ class GUI:
         plt.close(fig)
         plt.close("all")
 
+    def set_config(self, config):
+        if config is None:
+            return
+        for x in self._list_defaults:
+            if x in config:
+                setattr(self, x, config[x])
+
 
 if __name__ == "__main__":
     # Input arguments from command line.
@@ -290,6 +298,8 @@ if __name__ == "__main__":
     arg_result_path = os.path.dirname(arg_file_path)
     arg_file_name = os.path.basename(arg_file_path)
 
+    conf = load_config("configs/GridSegmentation.yaml")
+
     # Load Image
     img = Image()
     img.load(arg_file_path)
@@ -297,10 +307,12 @@ if __name__ == "__main__":
 
     # Make Grid
     grd = Grid()
+    grd.set_config(conf)
     grd.propose_grid(img_gray.data)
 
     # Propose Grid
     gi = GUI(img_gray, grd)
+    gi.set_config(conf)
     gi.run()
 
     # Export choice

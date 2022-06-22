@@ -21,13 +21,14 @@ from skimage.filters import sobel, gaussian
 import yaml
 from grid import Grid, ImageGrid
 from image import Image
-from configs import load_config
+from config import load_config
 
 mpl.use("Qt5Cairo")
 mpl.rcParams["keymap.back"] = ['backspace']
 mpl.rcParams["keymap.forward"] = []
 mpl.rcParams["keymap.save"] = ['ctrl+s']  # Remove s here
 mpl.rcParams["keymap.home"] = ['h', 'home']
+mpl.rcParams["keymap.all_axes"] = ['ctrl+a']  # deprecated
 
 
 class DropletSeparation:
@@ -355,13 +356,13 @@ class GUI:
 if __name__ == "__main__":
     # Input arguments from command line.
     parser = argparse.ArgumentParser(description='Run DropletSeparation.')
-    parser.add_argument("--file", required=False, help="Input filepath of image.")
+    parser.add_argument("--file", required=True, help="Input filepath of image.")
     args = vars(parser.parse_args())
     print("Input of argparse:", args)
 
     # File and path information
-    # arg_file_path = args["file"]
-    arg_file_path = "output/HG2A_30s/HG2A_30s_select.jpg"
+    arg_file_path = args["file"]
+    # arg_file_path = "output/HG2A_30s/HG2A_30s_select.jpg"
     arg_result_path = os.path.dirname(arg_file_path)
     arg_file_name = os.path.basename(arg_file_path)
 
