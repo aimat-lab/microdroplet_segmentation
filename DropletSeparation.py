@@ -52,7 +52,7 @@ class DropletSeparation:
         self.grid_edges_dilated.image = np.array(self.grid_edges_dilated.image, dtype="bool")
 
         self.mode_param_default = np.array([[[0, 0.3, 0.5, 5, 64, 3, 0.1]]])
-        self.mode_params_step = np.array([[[0, 0.1, 0.1, 0.25, 5, 1, 0.1]]])
+        self.mode_params_step = np.array([[[0, 0.1, 0.1, 0.25, 5, 2, 0.1]]])
         self.mode_param_label = {1: "Marker background level",
                                  2: "Marker droplet level",
                                  3: "Sigma",
@@ -162,6 +162,7 @@ class DropletSeparation:
 
 
 class GUI:
+
     brightness_increase = 10
 
     def __init__(self, droplet: DropletSeparation):
