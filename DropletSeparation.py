@@ -155,7 +155,7 @@ class DropletSeparation:
             scale = scale_bar_config["length"]
             if scale is not None:
                 print("Using Scale Bar: %s" % scale)
-                df2 = pd.DataFrame(np.array(pixel_size) / scale / scale)
+                df2 = pd.DataFrame(np.transpose(pixel_size) / scale / scale)
                 df2.to_excel(os.path.join(directory_path, "DropletsSizeScaled.xlsx"))
             else:
                 print("Could not read scale bar")
