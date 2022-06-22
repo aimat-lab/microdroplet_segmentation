@@ -18,6 +18,7 @@ mpl.rcParams["keymap.all_axes"] = ['ctrl+a']  # deprecated
 
 
 class GUI:
+
     _list_defaults = ["pixel_box", "offset_step_x", "stretch_step_x", "offset_step_y",
                       "stretch_step_y", "default_size", "brightness_increase", "use_blit"]
     pixel_box = 10

@@ -185,7 +185,10 @@ class Grid:
             return
         for x in self._list_defaults:
             if x in config:
-                setattr(self, x, config[x])
+                item = config[x]
+                if isinstance(item, (list, tuple)):
+                    item = np.array(item)
+                setattr(self, x, item)
 
 
 class ImageGrid:
