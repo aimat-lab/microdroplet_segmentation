@@ -140,13 +140,13 @@ class Grid:
         self.num_x = self.default_num_x  # is left, right
         self.num_y = self.default_num_y  # is left, right
 
-    def shift_origin(self, nx=None, ny=None):
-        if nx is not None:
-            index_shift = np.arange(-self.num_x[0], self.num_x[1])[nx]
+    def shift_origin(self, index_x=None, index_y=None):
+        if index_x is not None:
+            index_shift = np.arange(-self.num_x[0], self.num_x[1])[index_x]
             self.origin[1] += index_shift * self.delta_x
             self.num_x -= np.array([-index_shift, index_shift], dtype="int")
-        if ny is not None:
-            index_shift = np.arange(-self.num_y[0], self.num_y[1])[ny]
+        if index_y is not None:
+            index_shift = np.arange(-self.num_y[0], self.num_y[1])[index_y]
             self.origin[0] += index_shift * self.delta_y
             self.num_y -= np.array([-index_shift, index_shift], dtype="int")
 
