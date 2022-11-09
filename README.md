@@ -23,7 +23,7 @@ and creates an equally named output folder in "output/". For each image a series
 which can also be used independently but may require input from the previous module. 
 Modules are ``ImageSelection.py``, ``FindScaleBar.py``, ``GridSegmentation.py`` and ``DropletSeparation.py``.
 General-use classes are given in ``grid.py`` and `image.py`. 
-Each module opens a "Qt5Cairo" interactive backend of `matplotlib`. Press "enter" to accept.
+Each module opens a "Qt5Cairo" interactive backend of `matplotlib`. Press "enter" to accept and continue.
 
 
 # Usage
