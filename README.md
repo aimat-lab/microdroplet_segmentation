@@ -6,7 +6,7 @@ This data analysis tool was developed to automatically detect and evaluate dropl
 # Requirements 
 
 Required packages for this project can be installed with ``pip`` and are listed below. 
-The GUI uses ``matplotlib`` and image processing is handled by `opencv` and ``. 
+The GUI uses ``matplotlib`` and image processing is handled by `opencv` and `skimage`. 
 The code is tested on Windows machines to run on lab computers, where python is available in system PATH environment variable!
 
 ```shell
