@@ -18,8 +18,14 @@ python -m pip install scikit-image
 
 # Implementation details
 
-
+The main program of ``main.py``, executed with `RUN.bat` or `python main.py` runs over all images in "input/" folder 
+and creates an equally named output folder in "output/". For each image a series of individual python modules is called,
+which can also be used independently but may require input from the previous module. 
+Modules are ``ImageSelection.py``, ``FindScaleBar.py``, ``GridSegmentation.py`` and ``DropletSeparation.py``.
+General use classes are in ``grid.py`` and `image.py`. 
+Each module opens a "Qt5Cairo" interactive backend of `matplotlib`. Press "enter" to accept.
 
 
 # Usage
+
 
