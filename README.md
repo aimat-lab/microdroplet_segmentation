@@ -48,10 +48,18 @@ Increasing brightness and contrast is only for show, but does not alter image in
 
 ### GridSegmentation.py
 
-
+With this module the grid is adjusted to the data. The auto grid should be already quite good. You can reproduce the auto-grid with 'r'.
+A simple uniform standard grid can be generated with 'n' in case the auto-grid fails completely.
+You can add/remove grid rows/columns with 'i,j,k,l'. Change between add and remove with 'u'. 
+When clicking at the grid lines you can change the origin marked as green. You can lock/unlock this by pressing 'm'.
+The grid is stretched with 'w,a,s,d' around the origin. You can move the grid with arrow keys.
+Removing rows/columns at the origin should not cause an error, just shift the origin to its proper position.
+Note that this is not an infinite grid, so the 0th position for row/column is well-defined.
 
 ![plot](./docs/grid.png)
 
 ### DropletSeparation.py
+
+Lastly the droplets are 
 
 ![plot](./docs/segmentation.png)
