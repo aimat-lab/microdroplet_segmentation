@@ -14,3 +14,10 @@ mode_params_step:
 - 5
 - 2
 - 0.1
+mode_param_label:
+  1: "Marker background level"
+  2: "Marker droplet level"
+  3: "Sigma"
+  4: "Min. Drop Size"
+  5: "Median Kernel"
+  6: "Min. Intensity level"

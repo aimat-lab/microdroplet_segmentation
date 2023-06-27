@@ -65,6 +65,14 @@ class DropletSeparation:
         self.mode_params = np.zeros(list(self.grid.grid_shape) + [7])
         self.mode_params[:, :] = self.mode_param_default
 
+    def set_config(self, config):
+        # print("Apply settings from config file.")
+        self.mode_param_default = np.expand_dims(np.expand_dims(np.array(config["mode_param_default"]), axis=0), axis=0)
+        self.mode_params_step = np.expand_dims(np.expand_dims(np.array(config["mode_params_step"]), axis=0), axis=0)
+        self.mode_param_label = dict(config["mode_param_label"])
+        self.mode_params = np.zeros(list(self.grid.grid_shape) + [self.mode_param_default.shape[-1]])
+        self.mode_params[:, :] = self.mode_param_default
+
     @staticmethod
     def find_max_class(labeled_array: np.ndarray):
         labels, counts = np.unique(labeled_array, return_counts=True)
@@ -370,6 +378,8 @@ if __name__ == "__main__":
     arg_result_path = os.path.dirname(arg_file_path)
     arg_file_name = os.path.basename(arg_file_path)
 
+    conf = load_config("configs/DropletSeparation.yaml")
+
     # Load Image
     img = Image()
     img.load(arg_file_path)
@@ -380,6 +390,7 @@ if __name__ == "__main__":
 
     # Image Grid
     seg = DropletSeparation(img, grd)
+    seg.set_config(conf)
     seg.find_segmentation()
 
     # Propose Grid
