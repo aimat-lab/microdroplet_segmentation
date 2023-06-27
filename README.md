@@ -77,6 +77,7 @@ since this may affect the overall size of the detected droplets between images a
 However, the GUI can be used to find good default parameters in the first place.
 You can then change the default parameters in ``configs/DropletSeparation.yaml``.
 If a scale bar was found, the droplet size is scaled to by the scale bar length in "DropletsSizeScaled.xlsx".
+Changing the brightness only affects the displayed image but not the algorithm or the image data.
 
 
 ![plot](./docs/segmentation.png)
