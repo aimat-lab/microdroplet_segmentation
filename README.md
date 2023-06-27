@@ -28,8 +28,30 @@ Each module opens a "Qt5Cairo" interactive backend of `matplotlib`. Press "enter
 
 # Usage
 
+With ``main.py`` the sequence of the following scripts is executed for each image in `./input` .
+Note that the scripts may require output from the previous script. To accept and continue to the next step press 'enter'.
+Interactive help and key bindings is usually plotted on the left.
+
 ### FindScaleBar.py
+
+First is an optional scale bar information. If the scale bar is detected properly, you can accept its value with 'a'.
+The information is stored in 'ScaleBar.yaml'. The detection algorithm is a hard-coded simple search routine.
 
 ![plot](./docs/scale_bar.png)
 
+### ImageSelection.py
 
+The image selection allows to remove some boundaries and to pick an image selection and to rotate the image if the image was not aligned.
+Increasing brightness and contrast is only for show, but does not alter image information. With 'g' you can activate grid lines to guide the eye.
+
+![plot](./docs/position.png)
+
+### GridSegmentation.py
+
+
+
+![plot](./docs/grid.png)
+
+### DropletSeparation.py
+
+![plot](./docs/segmentation.png)
