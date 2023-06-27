@@ -14,7 +14,10 @@ mpl.rcParams["keymap.save"] = ['ctrl+s']  # Remove s here to be able to use w,s,
 mpl.rcParams["keymap.home"] = ['h', 'home']
 mpl.rcParams["keymap.xscale"] = ['ctrl+k', 'ctrl+L']
 mpl.rcParams["keymap.yscale"] = ['ctrl+l']
-mpl.rcParams["keymap.all_axes"] = ['ctrl+a']  # deprecated
+try:
+    mpl.rcParams["keymap.all_axes"] = ['ctrl+a']  # deprecated
+except KeyError:
+    pass
 
 
 class GUI:
@@ -157,11 +160,11 @@ class GUI:
         found_y = np.any(diff_y < self.pixel_box)
         if found_x:
             idx = np.argmin(diff_x)
-            self.grid.shift_origin(nx=idx)
+            self.grid.shift_origin(index_x=idx)
             self.set_grid_x()
         elif found_y:
             idx = np.argmin(diff_y)
-            self.grid.shift_origin(ny=idx)
+            self.grid.shift_origin(index_y=idx)
             self.set_grid_y()
 
     def set_grid_x(self, flush=True):

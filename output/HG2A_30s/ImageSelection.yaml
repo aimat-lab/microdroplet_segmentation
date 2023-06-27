@@ -1,8 +1,8 @@
 file_path: output\HG2A_30s\HG2A_30s.jpg
 range_x:
-- 680
-- 1856
+- 618
+- 1945
 range_y:
-- 2694
-- 4888
-rotation: 0.4
+- 2639
+- 4901
+rotation: 0.6000000000000001

@@ -28,7 +28,10 @@ mpl.rcParams["keymap.back"] = ['backspace']
 mpl.rcParams["keymap.forward"] = []
 mpl.rcParams["keymap.save"] = ['ctrl+s']  # Remove s here
 mpl.rcParams["keymap.home"] = ['h', 'home']
-mpl.rcParams["keymap.all_axes"] = ['ctrl+a']  # deprecated
+try:
+    mpl.rcParams["keymap.all_axes"] = ['ctrl+a']  # deprecated
+except KeyError:
+    pass
 
 
 class DropletSeparation:
