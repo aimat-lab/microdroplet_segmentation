@@ -54,19 +54,15 @@ class DropletSeparation:
         self.grid_edges_dilated_preview.image = np.array(self.grid_edges_dilated_preview.image, dtype="bool")
         self.grid_edges_dilated.image = np.array(self.grid_edges_dilated.image, dtype="bool")
 
-        self.mode_param_default = np.array([[[0, 0.3, 0.5, 5, 64, 3, 0.1]]])
-        self.mode_params_step = np.array([[[0, 0.1, 0.1, 0.25, 5, 2, 0.1]]])
-        self.mode_param_label = {1: "Marker background level",
-                                 2: "Marker droplet level",
-                                 3: "Sigma",
-                                 4: "Min. Drop Size",
-                                 5: "Median Kernel",
-                                 6: "Min. Intensity level"}
-        self.mode_params = np.zeros(list(self.grid.grid_shape) + [7])
+        # Empty settings for algorithm. Needs config file!
+        self.mode_param_default = np.zeros((1, 1, 7))
+        self.mode_params_step = np.zeros((1, 1, 7))
+        self.mode_param_label = {i: "Unknown" for i in range(1, self.mode_param_default.shape[-1])}
+        self.mode_params = np.zeros(list(self.grid.grid_shape) + [self.mode_param_default.shape[-1]])
         self.mode_params[:, :] = self.mode_param_default
 
     def set_config(self, config):
-        # print("Apply settings from config file.")
+        print("Apply settings from config file.")
         self.mode_param_default = np.expand_dims(np.expand_dims(np.array(config["mode_param_default"]), axis=0), axis=0)
         self.mode_params_step = np.expand_dims(np.expand_dims(np.array(config["mode_params_step"]), axis=0), axis=0)
         self.mode_param_label = dict(config["mode_param_label"])

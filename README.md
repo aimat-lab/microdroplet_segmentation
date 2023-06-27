@@ -62,11 +62,11 @@ Note that this is not an infinite grid, so the 0th position for row/column is we
 ### DropletSeparation.py
 
 Lastly the droplets are detected and their size and intensity recorded.
-For edge detection, a sobel filter with median and gaussian blurring from scikit-image is used.[47,48]
-After droplet segmentation with a two-label watershed algorithm within each array box on the sobel elevation map,[49–51] 
+For edge detection, a sobel filter with median and gaussian [blurring](https://docs.opencv.org/4.x/d4/d13/tutorial_py_filtering.html) from [scikit-image](https://scikit-image.org/) is used.
+After droplet segmentation with a two-label [watershed](https://scikit-image.org/docs/stable/auto_examples/segmentation/plot_watershed.html#sphx-glr-auto-examples-segmentation-plot-watershed-py) algorithm within each array box on the [sobel](https://scikit-image.org/docs/stable/auto_examples/applications/plot_coins_segmentation.html) elevation map, 
 the pixel size and integrated gray-scale intensities of each droplet are recorded.
 Note that dependent on the image size only a preview image is shown with reduced resolution. 
-But when you are satisfied wit the settings you can render at full resolution with 'r'.
+But when you are satisfied with the settings you can render at full resolution with 'r'.
 You can modify the default parameters of the detection algorithm. 
 You can select the parameter with '1,2,3,...' and the parameter is given in the title or the log on the right.
 You can change the value with keys up/down. You can print current (mean) settings with 'm'.
