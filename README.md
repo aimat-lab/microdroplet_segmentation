@@ -30,9 +30,6 @@ Each module opens a "Qt5Cairo" interactive backend of `matplotlib`. Press "enter
 
 ### FindScaleBar.py
 
-<p align="left">
-  <img src="https://github.com/aimat-lab/microdroplet_segmentation/blob/master/docs/scale_bar.png" height="80"/>
-</p>
-
+![plot](./docs/scale_bar.png)
 
 
