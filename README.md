@@ -86,7 +86,7 @@ Changing the brightness only affects the displayed image but not the algorithm o
 ## Citing
 
 If you want to cite this repo, please refer to our articles [1](https://onlinelibrary.wiley.com/doi/full/10.1002/smtd.202300553) or 
-[2]().
+[2](https://onlinelibrary.wiley.com/doi/full/10.1002/admi.202300227).
 
 ```
 @article{https://doi.org/10.1002/smtd.202300553,
@@ -98,5 +98,15 @@ number = {n/a},
 pages = {2300553},
 doi = {https://doi.org/10.1002/smtd.202300553},
 url = {https://onlinelibrary.wiley.com/doi/abs/10.1002/smtd.202300553}
+}
+@article{https://doi.org/10.1002/admi.202300227,
+author = {Iwohn, Michelle J. and Seifermann, Maximilian and Reiser, Patrick and Höpfner, Julius and El Khaled El Faraj, Razan and Heißler, Stefan and Popova, Anna A. and Levkin, Pavel A.},
+title = {OligoHydrogelArray (OHA) for Parallelized Solid-Phase Extraction of Oligonucleotides},
+journal = {Advanced Materials Interfaces},
+volume = {n/a},
+number = {n/a},
+pages = {2300227},
+doi = {https://doi.org/10.1002/admi.202300227},
+url = {https://onlinelibrary.wiley.com/doi/abs/10.1002/admi.202300227},
 }
 ```
